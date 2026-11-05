@@ -1,0 +1,13 @@
+[Unit]
+Description=Finish installing this new StellarCortex computer
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/var/lib/stellarcortex-installed.json
+ConditionPathExists=!/var/lib/stellarcortex-firstboot-failed
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/stellarcortex-worker/deployment/ubuntu-desktop/guest/firstboot.sh
+TimeoutStartSec=90min
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+*
+!package.json
+!package-lock.json
+!src/
+!src/**
+!public/
+!public/**
+!scripts/
+!scripts/**
+!docs/
+!docs/**
+!README.md
+!README.he.md
+!LICENSE
+!Dockerfile
+!compose.yaml

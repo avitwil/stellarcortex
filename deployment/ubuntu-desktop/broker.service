@@ -1,0 +1,26 @@
+[Unit]
+Description=StellarCortex registered desktop lifecycle and console broker
+Requires=libvirtd.service stellarcortex-desktop-network-guard.service stellarcortex-desktop-network-coexistence.service
+After=libvirtd.service stellarcortex-desktop-network-guard.service stellarcortex-desktop-network-coexistence.service
+[Service]
+Type=simple
+User=root
+Group=root
+UMask=0077
+LimitCORE=0
+RuntimeDirectory=stellarcortex-desktop-broker
+RuntimeDirectoryMode=0711
+ExecStart=/usr/bin/flock -n /run/stellarcortex-desktop-broker/process.lock node /opt/stellarcortex-desktop-broker/scripts/desktop-broker-main.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_UNIX AF_VSOCK
+StateDirectory=stellarcortex/desktops/broker
+StateDirectoryMode=0700
+ReadWritePaths=/run/stellarcortex-desktop-broker
+[Install]
+WantedBy=multi-user.target

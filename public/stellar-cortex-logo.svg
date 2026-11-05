@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 216" role="img" aria-label="StellarCortex">
+  <defs>
+    <linearGradient id="left" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a97bff"/><stop offset="1" stop-color="#ee62e2"/></linearGradient>
+    <linearGradient id="right" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ce6f0"/><stop offset="1" stop-color="#8fa8f5"/></linearGradient>
+    <linearGradient id="core" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7a6f2"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#8fe9f5"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#d9a8ff" stop-opacity=".55"/><stop offset="1" stop-color="#d9a8ff" stop-opacity="0"/></radialGradient>
+    <path id="spark" d="M0-9 2-2 9 0 2 2 0 9-2 2-9 0-2-2z"/>
+  </defs>
+  <circle cx="120" cy="106" r="58" fill="url(#glow)"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke="url(#left)" stroke-width="5" d="M112 22C98 8 70 8 60 26 40 24 26 42 30 62 12 72 8 98 22 112 12 130 20 154 40 160 42 184 68 200 90 190 98 202 108 202 113 194"/>
+    <path stroke="url(#right)" stroke-width="5" d="M128 22C142 8 170 8 180 26 200 24 214 42 210 62 228 72 232 98 218 112 228 130 220 154 200 160 198 184 172 200 150 190 142 202 132 202 127 194"/>
+    <path stroke="url(#left)" stroke-width="2" d="M64 44 94 36 104 62 84 74 64 44ZM84 74 46 80 42 116 74 108 84 74ZM42 116 58 148 86 138 74 108M58 148 76 174 102 164 86 138M104 62 120 106 84 74M74 108 120 106 86 138M102 164 112 134"/>
+    <path stroke="url(#right)" stroke-width="4" d="M136 38V58L150 72H170M160 34H178L196 52V68M154 92H176L186 82M160 106H198M154 120H178L192 134M136 170V150L150 136H168M160 170H180L192 158"/>
+  </g>
+  <g fill="url(#left)">
+    <use href="#spark" transform="translate(64 44)"/><use href="#spark" transform="translate(94 36) scale(.7)"/><use href="#spark" transform="translate(46 80) scale(.8)"/>
+    <use href="#spark" transform="translate(42 116)"/><use href="#spark" transform="translate(58 148) scale(.8)"/><use href="#spark" transform="translate(76 174)"/>
+    <circle cx="104" cy="62" r="3.5"/><circle cx="84" cy="74" r="4"/><circle cx="74" cy="108" r="3.5"/><circle cx="86" cy="138" r="4"/><circle cx="102" cy="164" r="3"/>
+  </g>
+  <g fill="none" stroke="url(#right)" stroke-width="4">
+    <circle cx="176" cy="72" r="6"/><circle cx="196" cy="74" r="6"/><circle cx="204" cy="106" r="6"/><circle cx="196" cy="138" r="6"/><circle cx="174" cy="136" r="6"/><circle cx="196" cy="154" r="6"/>
+  </g>
+  <path fill="url(#core)" d="m120 58 8.500 33.300 24-14-14 24 33.500 8.700-33.500 8.700 14 24-24-14-8.500 33.300-8.500-33.300-24 14 14-24-33.500-8.700 33.500-8.700-14-24 24 14z" transform="translate(24 20.800) scale(.8)"/>
+</svg>

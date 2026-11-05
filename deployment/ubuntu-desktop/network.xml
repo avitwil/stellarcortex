@@ -1,0 +1,11 @@
+<network>
+  <name>stellarcortex-desktops</name>
+  <forward mode='nat'/>
+  <bridge name='virbr-scx' stp='on' delay='0'/>
+  <dns enable='yes'/>
+  <ip address='192.168.153.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.153.100' end='192.168.153.199'/>
+    </dhcp>
+  </ip>
+</network>

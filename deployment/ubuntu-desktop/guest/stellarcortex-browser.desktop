@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=StellarCortex Browser
+Comment=The visible browser shared with your assistant
+Exec=/usr/bin/node /opt/stellarcortex-worker/scripts/open-visible-browser.mjs
+Icon=web-browser
+Terminal=false
+Categories=Network;WebBrowser;
+StartupWMClass=chromium

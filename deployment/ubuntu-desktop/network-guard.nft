@@ -1,0 +1,18 @@
+table inet scx_desktops {
+  chain input {
+    type filter hook input priority -20; policy accept;
+    iifname "virbr-scx" meta nfproto ipv6 drop
+    iifname "virbr-scx" udp sport 68 udp dport 67 accept
+    iifname "virbr-scx" ip daddr 192.168.153.1 udp dport 53 accept
+    iifname "virbr-scx" ip daddr 192.168.153.1 tcp dport 53 accept
+    iifname "virbr-scx" drop
+  }
+  chain forward {
+    type filter hook forward priority -20; policy accept;
+    iifname "virbr-scx" ct state invalid drop
+    iifname "virbr-scx" meta nfproto ipv6 drop
+    iifname "virbr-scx" ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16, 198.18.0.0/15, 224.0.0.0/4, 240.0.0.0/4 } drop
+    oifname "virbr-scx" ct state established,related accept
+    oifname "virbr-scx" drop
+  }
+}

@@ -1,0 +1,578 @@
+/* Settings and account surfaces. Other dialogs retain their own layout. */
+.provider-terms {
+  margin-bottom: 16px;
+}
+.connection-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+.connection-page-heading h3 {
+  margin: 0;
+}
+.connection-page-heading .secondary {
+  font-size: 11px;
+}
+.new-api-provider {
+  padding: 18px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 4%, var(--panel));
+  margin-bottom: 26px;
+}
+.new-api-provider .settings-path {
+  margin: 8px 0 16px;
+}
+.connection-advanced {
+  margin-top: 16px;
+}
+.provider-connection-card .settings-path {
+  overflow-wrap: anywhere;
+}
+.account-menu {
+  position: fixed;
+  width: 286px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 95px);
+  overflow: auto;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 16px 65px #0007;
+  z-index: 70;
+  text-align: start;
+}
+.account-menu-identity {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 10px 14px;
+}
+.account-menu-identity > div {
+  min-width: 0;
+}
+.account-menu-identity strong,
+.account-menu-identity small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-menu-identity strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.account-menu-identity small {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.account-menu > button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: start;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.account-menu > button:hover,
+.account-menu > button:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+.account-menu > button svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  flex-shrink: 0;
+}
+.account-menu > button kbd {
+  margin-inline-start: auto;
+  font:
+    10px ui-monospace,
+    monospace;
+  color: var(--subtle);
+}
+.account-menu > .account-menu-usage {
+  display: block;
+  padding: 10px;
+  background: color-mix(in srgb, var(--hover) 65%, transparent);
+}
+.account-menu-usage > span {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.account-menu-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 6px 4px;
+}
+.usage-window {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.usage-window-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 12px;
+}
+.usage-window-heading span {
+  color: var(--muted);
+}
+.usage-window-heading strong {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.usage-window .usage-track {
+  height: 5px;
+  margin: 9px 0;
+}
+.usage-window small {
+  font-size: 10px;
+}
+.usage-window.compact {
+  padding: 4px 0;
+  border: 0;
+}
+.usage-window.compact .usage-window-heading {
+  font-size: 10px;
+  gap: 8px;
+}
+.usage-window.compact .usage-window-heading strong {
+  font-size: 10px;
+}
+.usage-window.compact .usage-track {
+  height: 3px;
+  margin: 6px 0;
+}
+#modal[data-kind='settings'] {
+  width: min(850px, calc(100vw - 32px));
+  height: min(710px, 88dvh);
+}
+#modal[data-kind='settings'] .modal-top {
+  height: 62px;
+  padding: 15px 23px;
+}
+#modal[data-kind='settings'] #modal-body {
+  padding: 0;
+  height: calc(100% - 62px);
+  max-height: none;
+  overflow: hidden;
+}
+.settings-shell {
+  display: grid;
+  grid-template-columns: 178px minmax(0, 1fr);
+  height: 100%;
+}
+.settings-nav {
+  padding: 18px 10px;
+  border-inline-end: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: color-mix(in srgb, var(--side) 75%, transparent);
+}
+.settings-nav > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  text-align: start;
+  color: var(--muted);
+}
+.settings-nav > button svg {
+  height: 16px;
+  width: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  flex-shrink: 0;
+}
+.settings-nav > button.active {
+  color: var(--text);
+  background: var(--hover);
+}
+.settings-nav > button:hover {
+  background: var(--hover);
+}
+.settings-nav-brand {
+  margin-top: auto;
+  padding: 22px 12px 4px;
+  font-size: 11px;
+  color: var(--subtle);
+}
+.settings-nav-brand small {
+  display: block;
+  font:
+    10px ui-monospace,
+    monospace;
+  margin-top: 5px;
+  min-height: 12px;
+}
+.settings-content {
+  overflow: auto;
+  padding: 27px 30px 36px;
+}
+.settings-content > h3 {
+  font-size: 21px;
+  font-weight: 500;
+  margin: 0 0 25px;
+}
+.settings-section {
+  padding-bottom: 23px;
+  margin-bottom: 23px;
+  border-bottom: 1px solid var(--line);
+}
+.settings-section h4 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 16px;
+  color: var(--text);
+}
+.settings-section:last-child {
+  border-bottom: 0;
+}
+.settings-description {
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 12px 0 0;
+}
+.settings-account {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 16px;
+}
+.settings-account > div {
+  min-width: 0;
+  flex: 1;
+}
+.settings-account strong,
+.settings-account small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.settings-account strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.settings-account small {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.settings-connection {
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--muted);
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.settings-connection.connected {
+  color: var(--green);
+}
+.settings-content .secondary {
+  font-size: 11px;
+  padding: 8px 12px;
+}
+.settings-content .primary {
+  font-size: 12px;
+  padding: 10px 18px;
+}
+.settings-content label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 13px 0 7px;
+}
+.settings-content input,
+.settings-content select {
+  font-size: 12px;
+  min-height: 37px;
+}
+.settings-content .settings-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+.settings-form-row label {
+  margin-top: 0;
+}
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 20px 0 4px;
+}
+.settings-toggle-row strong,
+.settings-toggle-row small {
+  display: block;
+}
+.settings-toggle-row strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.settings-toggle-row small {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 5px;
+  line-height: 1.6;
+}
+.settings-toggle-row input[type='checkbox'] {
+  appearance: none;
+  width: 34px;
+  min-width: 34px;
+  height: 20px;
+  min-height: 20px;
+  border-radius: 20px;
+  background: var(--line);
+  border: 1px solid transparent;
+  padding: 0;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.settings-toggle-row input[type='checkbox']:after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  top: 2px;
+  left: 2px;
+  background: #e4e4e7;
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+.settings-toggle-row input[type='checkbox']:checked {
+  background: var(--accent);
+}
+.settings-toggle-row input[type='checkbox']:checked:after {
+  transform: translateX(14px);
+  background: #18151d;
+}
+.settings-toggle-row input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.settings-toggle-row input:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+.settings-advanced {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 13px 15px;
+}
+.settings-advanced summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+}
+.settings-advanced[open] summary {
+  color: var(--text);
+  margin-bottom: 15px;
+}
+.settings-save {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 22px;
+}
+.settings-device-code {
+  font-size: 24px;
+  letter-spacing: 3px;
+  margin: 12px 0;
+}
+.settings-computer-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+.settings-computer-card > svg {
+  width: 32px;
+  height: 32px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.2;
+  flex-shrink: 0;
+}
+.settings-computer-card strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.settings-computer-card p {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 7px 0 0;
+  line-height: 1.6;
+}
+.settings-path {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--hover);
+  padding: 12px;
+  border-radius: 8px;
+  margin: 12px 0 16px;
+}
+.settings-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.settings-plan strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+.settings-plan span {
+  font-size: 11px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.shortcut-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.shortcut-list kbd {
+  font:
+    11px ui-monospace,
+    monospace;
+  white-space: nowrap;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 4px 7px;
+  color: var(--muted);
+}
+.about-app {
+  text-align: center;
+  padding: 13px 5px 23px;
+}
+.about-app h3 {
+  font-size: 23px;
+  font-weight: 500;
+  margin: 15px 0;
+}
+.about-app p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+@media (max-width: 650px) {
+  #modal[data-kind='settings'] {
+    width: calc(100vw - 18px);
+    height: 90dvh;
+    max-height: 90dvh;
+  }
+  .settings-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .settings-nav {
+    flex-direction: row;
+    overflow: auto;
+    padding: 9px;
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--line);
+    gap: 4px;
+  }
+  .settings-nav > button {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 10px;
+  }
+  .settings-nav > button svg {
+    width: 14px;
+    height: 14px;
+  }
+  .settings-nav-brand {
+    display: none;
+  }
+  .settings-content {
+    padding: 22px 20px;
+  }
+  .settings-content .settings-form-row {
+    grid-template-columns: 1fr;
+  }
+  .settings-account {
+    flex-wrap: wrap;
+  }
+  .settings-connection {
+    margin-inline-start: auto;
+  }
+  .account-menu {
+    width: 270px;
+  }
+}
+#computer-boot-settings .computer-boot-toggle {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+#computer-boot-settings .computer-boot-toggle input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+}
+#computer-boot-settings .computer-boot-toggle span {
+  min-width: 0;
+}
+#computer-boot-settings .settings-path {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.computer-build-stages {
+  margin: 6px 0 10px;
+  padding-inline-start: 20px;
+  line-height: 1.9;
+}
+.computer-build-stages li[data-state='done'] {
+  opacity: 0.6;
+}
+.computer-build-stages li[data-state='active'] {
+  font-weight: 600;
+}
+.computer-build-stages li[data-state='waiting'] {
+  opacity: 0.45;
+}
+.first-step {
+  margin: 0 auto 22px;
+  max-width: 440px;
+  padding: 14px 16px;
+  border: 1px solid var(--border, #8884);
+  border-radius: 12px;
+  text-align: start;
+}
+.first-step p {
+  margin: 4px 0 10px;
+}

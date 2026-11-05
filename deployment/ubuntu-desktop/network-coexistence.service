@@ -1,0 +1,12 @@
+[Unit]
+Description=StellarCortex desktop bridge coexistence rules
+Requires=stellarcortex-desktop-network-guard.service
+After=stellarcortex-desktop-network-guard.service libvirtd.service nftables.service
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=-/etc/stellarcortex/desktop-network-coexistence.env
+ExecStart=/usr/bin/python3 /etc/stellarcortex/desktop-network-coexistence.py
+ExecStop=/usr/bin/python3 /etc/stellarcortex/desktop-network-coexistence.py --remove
+[Install]
+WantedBy=multi-user.target

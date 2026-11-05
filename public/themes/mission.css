@@ -1,0 +1,879 @@
+/* Mission control: dense and fast. Mono type is reserved for machine text. */
+html[data-design='mission'] body {
+  --bg: #14171d;
+  --side: #1a1e26;
+  --panel: #1a1e26;
+  --field: #171b22;
+  --bubble: #222733;
+  --hover: #262c39;
+  --line: #2b3140;
+  --control-border: #566076;
+  --text: #e7eaf0;
+  --muted: #a3acbc;
+  --subtle: #8a93a5;
+  --accent: #5fd4e4;
+  --cyan: #5fd4e4;
+  --magenta: #e48be6;
+  --primary: #5fd4e4;
+  --primary-hover: #7fdfec;
+  --on-primary: #08191c;
+  --violet: #b9a2ff;
+  --green: #79d2ad;
+  --red: #ff9ba6;
+  --warning: #eec27a;
+  --selection: #23304a;
+  --warning-bg: #2a2720;
+  --screen: #0e1014;
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --font-ui: 'IBM Plex Sans Hebrew', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+html[data-design='mission'] body.light {
+  --bg: #f2f3f6;
+  --side: #fff;
+  --panel: #fff;
+  --field: #fff;
+  --bubble: #eceef3;
+  --hover: #eceef3;
+  --line: #dde0e7;
+  --control-border: #868e9e;
+  --text: #161920;
+  --muted: #4c5463;
+  --subtle: #5f6777;
+  --accent: #077381;
+  --cyan: #077381;
+  --magenta: #a12a94;
+  --primary: #077381;
+  --primary-hover: #065f6b;
+  --on-primary: #fff;
+  --violet: #6d28d9;
+  --green: #0f6e4b;
+  --red: #b42345;
+  --warning: #7b5200;
+  --selection: #e5eefb;
+  --warning-bg: #fbf3e3;
+  --screen: #14171d;
+}
+html[data-design='mission'] code,
+html[data-design='mission'] pre,
+html[data-design='mission'] .tool-details pre,
+html[data-design='mission'] .hub-destination {
+  font-family: var(--font-mono);
+}
+html[data-design='mission'] .primary {
+  color: var(--on-primary);
+}
+html[data-design='mission'] .primary,
+html[data-design='mission'] .secondary,
+html[data-design='mission'] .danger {
+  min-height: 34px;
+}
+
+/* Command bar */
+#design-bar {
+  display: none;
+}
+/* The bar is a sibling of #app, so it does not hide with the workspace on lock or session expiry. */
+html[data-design='mission']:has(#app[hidden]) #design-bar {
+  display: none;
+}
+html[data-design='mission'] #design-bar {
+  position: relative;
+  z-index: 21;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-block-end: 1px solid var(--line);
+}
+html[data-design='mission'] #app {
+  height: calc(100dvh - 48px);
+}
+.design-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.design-omni {
+  flex: 1;
+  max-width: 520px;
+  height: 32px;
+  margin-inline: auto;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--field);
+  color: var(--subtle);
+  font-size: 13.5px;
+}
+.design-omni:hover {
+  border-color: var(--control-border);
+}
+.design-omni span {
+  flex: 1;
+  min-width: 0;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.design-omni svg,
+.design-bar-end svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.design-omni kbd {
+  font: 500 11.5px var(--font-mono);
+  direction: ltr;
+  border: 1px solid var(--control-border);
+  border-block-end-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+  color: var(--muted);
+}
+.design-bar-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.design-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.design-chip b {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.design-chip:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.design-chip[data-needs='true'] {
+  color: var(--magenta);
+  border-color: color-mix(in srgb, var(--magenta) 50%, var(--line));
+}
+.design-chip[data-needs='true'] b {
+  color: var(--magenta);
+}
+#design-server i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+#design-server[data-online='false'] i {
+  background: var(--warning);
+}
+
+/* Team panel */
+html[data-design='mission'] .sidebar {
+  position: relative;
+  width: 268px;
+  padding: 0;
+  border: 0;
+  border-inline-end: 1px solid var(--line);
+  background: var(--side);
+}
+html[data-design='mission'] .brand {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 6px;
+  z-index: 2;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+}
+html[data-design='mission'] .brand > .brand-logo,
+html[data-design='mission'] .brand > span,
+html[data-design='mission'] #search {
+  display: none;
+}
+html[data-design='mission'] #new-chat {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+}
+html[data-design='mission'] .bot-list {
+  padding: 2px 6px;
+}
+html[data-design='mission'] .section-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 9px 6px 5px;
+  min-height: 34px;
+  align-items: center;
+}
+html[data-design='mission'] .section-label span {
+  margin-inline-end: 30px;
+}
+html[data-design='mission'] .bot-row-wrap {
+  position: relative;
+}
+html[data-design='mission'] .team-member {
+  padding-inline-start: calc(var(--team-depth) * 14px);
+}
+html[data-design='mission'] .bot-row {
+  min-height: 46px;
+  padding: 6px 8px;
+  margin: 1px 0;
+  gap: 9px;
+  border: 0;
+  border-radius: 6px;
+}
+html[data-design='mission'] .bot-row.active,
+html[dir='rtl'][data-design='mission'] .bot-row.active {
+  background: var(--selection);
+  box-shadow: inset 2px 0 var(--cyan);
+}
+html[dir='rtl'][data-design='mission'] .bot-row.active {
+  box-shadow: inset -2px 0 var(--cyan);
+}
+html[data-design='mission'] .bot-row .avatar {
+  width: 26px;
+  height: 26px;
+}
+html[data-design='mission'] .group-avatar {
+  width: 26px;
+  gap: 1px;
+}
+html[data-design='mission'] .group-avatar .avatar:after {
+  display: none;
+}
+html[data-design='mission'] .group-avatar .avatar,
+html[data-design='mission'] .bot-row .group-avatar .avatar,
+html[data-design='mission'] .header .group-avatar .avatar {
+  width: 12px;
+  height: 12px;
+}
+html[data-design='mission'] .bot-row-wrap .unread,
+html[dir='rtl'][data-design='mission'] .bot-row-wrap .unread {
+  inset: auto;
+  inset-block-start: 5px;
+  inset-inline-start: 2px;
+}
+html[data-design='mission'] .bot-name {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+html[data-design='mission'] .bot-preview {
+  font-size: 12px;
+  line-height: 1.3;
+  margin: 0;
+}
+html[data-design='mission'] .bot-row-menu {
+  inset-inline-end: 2px;
+}
+.design-state {
+  display: none;
+}
+html[data-design='mission'] .design-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--subtle);
+  white-space: nowrap;
+}
+html[data-design='mission'] .design-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--subtle);
+}
+html[data-design='mission'] .design-state[data-status='running'] {
+  color: var(--cyan);
+}
+html[data-design='mission'] .design-state[data-status='running'] i {
+  background: var(--cyan);
+  box-shadow: none;
+}
+html[data-design='mission'] .design-state[data-status='waiting'] {
+  color: var(--magenta);
+}
+html[data-design='mission'] .design-state[data-status='waiting'] i {
+  background: var(--magenta);
+  box-shadow: none;
+}
+html[data-design='mission'] .bot-row-wrap:hover .design-state,
+html[data-design='mission'] .bot-row-wrap:focus-within .design-state {
+  visibility: hidden;
+}
+html[data-design='mission'] .bot-row-menu {
+  opacity: 0;
+}
+html[data-design='mission'] .bot-row-wrap:hover .bot-row-menu,
+html[data-design='mission'] .bot-row-menu:focus-visible {
+  opacity: 1;
+}
+html[data-design='mission'] .sidebar-footer {
+  padding: 6px;
+  margin: 0;
+}
+html[data-design='mission'] .nav-item {
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 13.5px;
+  border-radius: 6px;
+}
+html[data-design='mission'] .account {
+  margin-top: 4px;
+  padding: 8px 6px 2px;
+  font-size: 13px;
+}
+
+/* Chat */
+html[data-design='mission'] .header {
+  height: 46px;
+  min-height: 46px;
+  padding-inline: 14px;
+  gap: 10px;
+  background: var(--panel);
+}
+html[data-design='mission'] .header .avatar {
+  width: 26px;
+  height: 26px;
+}
+html[data-design='mission'] .header-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+html[data-design='mission'] .header-title small {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--subtle);
+}
+html[data-design='mission'] .header .icon {
+  width: 32px;
+  height: 32px;
+}
+.design-tabs {
+  display: none;
+}
+html[data-design='mission'] .design-tabs {
+  display: flex;
+  align-self: stretch;
+  gap: 2px;
+  margin-inline-start: 12px;
+}
+.design-tabs button {
+  position: relative;
+  padding: 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.design-tabs button:hover {
+  background: var(--hover);
+}
+.design-tabs button[aria-current] {
+  color: var(--text);
+}
+.design-tabs button[aria-current]::after {
+  content: '';
+  position: absolute;
+  inset-inline: 8px;
+  inset-block-end: -1px;
+  height: 2px;
+  background: var(--cyan);
+}
+html[data-design='mission'] .conversation {
+  max-width: 880px;
+  padding: 14px 20px 6px;
+}
+html[data-design='mission'] .message {
+  margin-block-end: 12px;
+  gap: 10px;
+}
+html[data-design='mission'] .message.user {
+  justify-content: flex-start;
+}
+html[data-design='mission'] .message.user .message-content {
+  max-width: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+html[data-design='mission'] .message.user .message-text {
+  padding-inline-start: 12px;
+  border-inline-start: 2px solid var(--control-border);
+}
+html[data-design='mission'] .message .avatar {
+  width: 26px;
+  height: 26px;
+}
+html[data-design='mission'] .message-content {
+  max-width: 100%;
+}
+html[data-design='mission'] .message-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-block-end: 2px;
+}
+html[data-design='mission'] .message-label time {
+  font: 400 12px var(--font-mono);
+  color: var(--subtle);
+}
+html[data-design='mission'] .message-text {
+  font-size: 15px;
+  line-height: 1.7;
+  max-width: 72ch;
+}
+html[data-design='mission'] .tool-entry,
+html[dir='rtl'][data-design='mission'] .tool-entry {
+  margin-block: 0;
+  margin-inline: 36px 0;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--field);
+  font-size: 13px;
+}
+html[data-design='mission'] :not(.tool-entry) + .tool-entry {
+  border-start-start-radius: 7px;
+  border-start-end-radius: 7px;
+}
+html[data-design='mission'] .tool-entry:not(:has(+ .tool-entry)) {
+  margin-block-end: 10px;
+  border-end-start-radius: 7px;
+  border-end-end-radius: 7px;
+}
+html[data-design='mission'] .tool-entry + .tool-entry {
+  border-block-start: 0;
+}
+html[data-design='mission'] .team-message {
+  margin-inline-start: 36px;
+  padding: 8px 10px;
+  font-size: 13.5px;
+  border-radius: 7px;
+}
+html[data-design='mission'] .composer-wrap {
+  max-width: 880px;
+  padding: 0 20px 10px;
+}
+html[data-design='mission'] .composer,
+html[data-design='mission'] body.light .composer {
+  padding: 8px 8px 6px;
+  background: var(--field);
+  border-color: var(--control-border);
+  border-radius: 8px;
+  box-shadow: none;
+}
+html[data-design='mission'] .composer:focus-within {
+  border-color: var(--cyan);
+  box-shadow: none;
+}
+html[data-design='mission'] .composer textarea {
+  font-size: 15px;
+  min-height: 30px;
+  line-height: 1.6;
+}
+html[data-design='mission'] .composer-model-controls {
+  margin: 3px 0 4px;
+}
+html[data-design='mission'] .composer-model-button {
+  font-size: 12.5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+html[data-design='mission'] .send {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+html[data-design='mission'] .composer-caption {
+  display: none;
+}
+html[data-design='mission'] .approval {
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 13.5px;
+}
+html[data-design='mission'] .queue {
+  font-size: 12.5px;
+}
+
+/* Activity pane */
+.design-activity {
+  display: none;
+}
+html[data-design='mission'] .design-activity {
+  display: block;
+  width: 340px;
+  flex-shrink: 0;
+  overflow: auto;
+  background: var(--panel);
+  border-inline-start: 1px solid var(--line);
+}
+html[data-design='mission'] .design-activity[hidden] {
+  display: none;
+}
+.design-activity section {
+  padding-block-end: 10px;
+  border-block-end: 1px solid var(--line);
+}
+.design-activity h2 {
+  margin: 0;
+  padding: 10px 12px 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--subtle);
+}
+.design-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  margin-inline: 12px;
+  overflow: hidden;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.design-cell {
+  padding: 7px 9px;
+  background: var(--field);
+}
+.design-cell small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--subtle);
+  white-space: nowrap;
+}
+.design-cell b {
+  font: 500 17px var(--font-mono);
+}
+.design-cell[data-kind='running'] b {
+  color: var(--cyan);
+}
+.design-cell[data-kind='waiting'] b {
+  color: var(--magenta);
+}
+.design-log,
+.design-jobs {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px;
+}
+.design-log button,
+.design-jobs button {
+  width: 100%;
+  padding: 5px 4px;
+  border-radius: 5px;
+  font-size: 13px;
+  text-align: start;
+}
+.design-log button:hover,
+.design-jobs button:hover {
+  background: var(--hover);
+}
+.design-log button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+}
+.design-log time {
+  font: 12px/1.6 var(--font-mono);
+  color: var(--subtle);
+}
+.design-log b {
+  font-weight: 500;
+}
+.design-log small {
+  display: block;
+  font-size: 12px;
+  color: var(--subtle);
+}
+.design-jobs button {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.design-jobs button > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.design-empty {
+  margin: 0;
+  padding: 0 12px;
+  font-size: 13px;
+  color: var(--subtle);
+}
+.design-pane-actions {
+  padding: 10px 12px;
+}
+
+/* Pages */
+html[data-design='mission'] .page {
+  padding: 20px 24px 48px;
+  max-width: 1180px;
+}
+html[data-design='mission'] .page-intro {
+  margin-block-end: 16px;
+}
+html[data-design='mission'] .page-intro h1 {
+  font-size: 20px;
+}
+html[data-design='mission'] .page-intro p {
+  font-size: 13.5px;
+}
+html[data-design='mission'] .hub-card {
+  padding: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+html[data-design='mission'] .hub-google {
+  margin-block-end: 14px;
+}
+html[data-design='mission'] .hub-card-heading {
+  padding: 10px 14px;
+  border-block-end: 1px solid var(--line);
+}
+html[data-design='mission'] .hub-card-heading h2,
+html[data-design='mission'] .hub-card-heading h3 {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+html[data-design='mission'] .hub-card-heading p {
+  margin: 0;
+  font-size: 12.5px;
+}
+html[data-design='mission'] .hub-services {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin: 12px 14px 0;
+}
+html[data-design='mission'] .hub-services label {
+  min-height: 0;
+  padding: 7px 8px;
+  background: var(--field);
+  border-radius: 6px;
+}
+html[data-design='mission'] .hub-services strong {
+  font-size: 13px;
+}
+html[data-design='mission'] .hub-services small {
+  font-size: 11.5px;
+}
+html[data-design='mission'] .hub-readonly,
+html[data-design='mission'] .hub-card > .hub-description,
+html[data-design='mission'] .hub-account {
+  margin-inline: 14px;
+}
+html[data-design='mission'] .hub-card > .actions {
+  margin: 10px 14px 12px;
+}
+html[data-design='mission'] .hub-section-heading h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+html[data-design='mission'] .hub-section-heading {
+  margin-block-end: 8px;
+}
+html[data-design='mission'] .hub-server-grid {
+  display: block;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+html[data-design='mission'] .hub-server {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) minmax(0, 1.4fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 7px 14px;
+  border: 0;
+  border-block-end: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+html[data-design='mission'] .hub-server:last-child {
+  border-block-end: 0;
+}
+html[data-design='mission'] .hub-server .hub-card-heading {
+  padding: 0;
+  border: 0;
+}
+html[data-design='mission'] .hub-server .hub-server-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+html[data-design='mission'] .hub-server .hub-destination {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+html[data-design='mission'] .hub-server .hub-description {
+  grid-column: 1/-1;
+  margin: 0;
+  font-size: 12.5px;
+}
+html[data-design='mission'] .hub-server .actions {
+  grid-area: 1/3;
+  margin: 0;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+html[data-design='mission'] .hub-server .actions button {
+  min-height: 28px;
+  padding: 2px 8px;
+  font-size: 12.5px;
+}
+
+/* Settings: a page beside the team panel, with dense rows */
+html[data-design='mission'][data-settings-page] #modal[data-kind='settings'] {
+  inset-block-start: 48px;
+  inset-inline-start: 268px;
+}
+html[data-design='mission'] .settings-nav > button {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 13.5px;
+  border-radius: 6px;
+}
+html[data-design='mission'] .settings-nav > button.active {
+  background: var(--selection);
+  color: var(--text);
+  box-shadow: inset 2px 0 var(--cyan);
+}
+html[dir='rtl'][data-design='mission'] .settings-nav > button.active {
+  box-shadow: inset -2px 0 var(--cyan);
+}
+html[data-design='mission'] .settings-content {
+  padding: 16px 20px 32px;
+}
+html[data-design='mission'] .settings-content > h3 {
+  font-size: 20px;
+}
+html[data-design='mission'] .settings-section {
+  padding: 12px 14px;
+  margin-block-end: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+html[data-design='mission'] .settings-content input,
+html[data-design='mission'] .settings-content select {
+  min-height: 34px;
+  font-size: 13.5px;
+}
+html[data-design='mission'] .design-option {
+  padding: 9px;
+}
+html[data-design='mission'] #modal,
+html[data-design='mission'] dialog {
+  border-radius: 10px;
+}
+
+@media (max-width: 1279px) {
+  html[data-design='mission'] .design-activity {
+    display: none;
+  }
+}
+@media (max-width: 1000px) {
+  html[data-design='mission'] .design-opt {
+    display: none;
+  }
+  html[data-design='mission'] .design-tabs {
+    margin-inline-start: 4px;
+  }
+  html[data-design='mission'] .hub-services {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  html[data-design='mission'] .hub-server {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  html[data-design='mission'] .hub-server .actions {
+    grid-area: auto;
+    flex-wrap: wrap;
+  }
+  html[data-design='mission'] .sidebar {
+    width: 236px;
+  }
+  html[data-design='mission'][data-settings-page] #modal[data-kind='settings'] {
+    inset-inline-start: 236px;
+  }
+}
+@media (max-width: 760px) {
+  html[data-design='mission'] .design-tabs,
+  html[data-design='mission'] .header-title small {
+    display: none;
+  }
+}
+@media (max-width: 620px) {
+  html[data-design='mission'] .sidebar {
+    position: fixed;
+    inset-block: 48px 0;
+    inset-inline-start: 0;
+    width: min(290px, 84vw);
+    z-index: 30;
+  }
+  html[data-design='mission'] .design-logo span,
+  html[data-design='mission'] .design-omni kbd {
+    display: none;
+  }
+  html[data-design='mission'] .conversation {
+    padding-inline: 10px;
+  }
+  html[data-design='mission'] .composer-wrap {
+    padding-inline: 8px;
+  }
+  html[data-design='mission'] .tool-entry,
+  html[dir='rtl'][data-design='mission'] .tool-entry,
+  html[data-design='mission'] .team-message {
+    margin-inline-start: 0;
+  }
+  html[data-design='mission'] .page {
+    padding: 16px 10px 40px;
+  }
+  html[data-design='mission'] .hub-services {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  html[data-design='mission'][data-settings-page] #modal[data-kind='settings'] {
+    inset-inline-start: 0;
+  }
+}

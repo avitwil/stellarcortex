@@ -1,0 +1,9 @@
+[Unit]
+Description=Start the StellarCortex computer at the owner's request
+Requires=libvirtd.service stellarcortex-desktop-network-guard.service
+After=libvirtd.service stellarcortex-desktop-network-guard.service stellarcortex-desktop-network-coexistence.service nftables.service
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I /opt/stellarcortex-desktop-broker/deployment/ubuntu-desktop/boot.py --now
+TimeoutStartSec=5min
+UMask=0077

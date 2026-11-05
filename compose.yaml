@@ -1,0 +1,23 @@
+services:
+  stellarcortex:
+    build: .
+    image: stellarcortex:local
+    environment:
+      # The image listens on loopback only. Inside the container port publishing needs
+      # every interface; the host-side limit is the 127.0.0.1 in ports below.
+      - STELLARCORTEX_BIND=0.0.0.0
+    ports:
+      - "127.0.0.1:4317:4317"
+    volumes:
+      - stellarcortex-data:/data
+      - codex-account:/home/node/.codex
+      - claude-account:/home/node/.claude
+    shm_size: "1gb"
+    restart: unless-stopped
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  stellarcortex-data:
+  codex-account:
+  claude-account:

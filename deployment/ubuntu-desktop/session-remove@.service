@@ -1,0 +1,18 @@
+[Unit]
+Description=Remove the desktop of deleted StellarCortex bot %i
+Requires=libvirtd.service
+After=libvirtd.service
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 -I /opt/stellarcortex-desktop-broker/deployment/ubuntu-desktop/session-provision.py %i remove
+TimeoutStartSec=5min
+Restart=no
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+RestrictAddressFamilies=AF_UNIX
+StateDirectory=stellarcortex/desktops/sessions
+StateDirectoryMode=0700
+ReadWritePaths=/var/lib/stellarcortex/desktops /etc/stellarcortex

@@ -1,0 +1,10 @@
+[Unit]
+Description=StellarCortex desktop network boundary
+Before=libvirtd.service
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/stellarcortex/desktop-network-guard.nft
+ExecStop=/usr/sbin/nft delete table inet scx_desktops
+[Install]
+WantedBy=multi-user.target

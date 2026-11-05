@@ -1,0 +1,8 @@
+{
+  "enabled": false,
+  "provider": "qemu-kvm-ubuntu-desktop",
+  "brokerSocket": "/run/stellarcortex-desktop-broker/broker.sock",
+  "lifecycleApproved": false,
+  "dataDir": "/home/you/.stellarcortex",
+  "records": []
+}

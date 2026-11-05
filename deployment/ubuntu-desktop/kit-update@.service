@@ -1,0 +1,12 @@
+[Unit]
+Description=Update the StellarCortex root-owned parts to verified release %i
+After=network-online.target
+[Service]
+Type=oneshot
+User=root
+UMask=0022
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/bin/env node /opt/stellarcortex-desktop-broker/scripts/kit-update.mjs %i
+TimeoutStartSec=1h
+Restart=no
+LimitCORE=0

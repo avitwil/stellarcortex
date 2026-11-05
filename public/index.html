@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="he">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0f1c"><meta name="description" content="StellarCortex — your AI team, models and tools in one workspace on your computer or server.">
+  <title>StellarCortex</title><link rel="icon" href="/stellar-cortex-icon.svg" type="image/svg+xml"><link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/menus.css">
+  <link rel="stylesheet" href="/settings.css">
+  <link rel="stylesheet" href="/voice.css">
+  <link rel="stylesheet" href="/apps-hub.css">
+  <link rel="stylesheet" href="/stellar-theme.css">
+  <link rel="stylesheet" href="/kanban.css">
+  <link rel="stylesheet" href="/themes/fonts.css">
+  <link rel="stylesheet" href="/themes/shared.css">
+  <link rel="stylesheet" href="/themes/observatory.css">
+  <link rel="stylesheet" href="/themes/daylight.css">
+  <link rel="stylesheet" href="/themes/mission.css">
+</head>
+<body>
+  <section id="login" class="login" hidden>
+    <div class="login-card"><img class="product-logo" src="/stellar-cortex-logo.svg" width="260" height="234" alt=""><h1>StellarCortex</h1><p>Your team. Your computer. Your choice.</p><form id="login-form"><label for="access-key">Installation access key / מפתח כניסה</label><input id="access-key" type="password" autocomplete="current-password" required placeholder="Paste your installation’s access key"><button class="primary" type="submit">Open workspace · פתיחת סביבת העבודה</button></form><p class="muted small">Run <code>node scripts/open.mjs</code> on the host to open automatically.<br>The key is stored in <code>~/.stellarcortex/access-key</code>.</p><p id="login-error" class="error"></p></div>
+  </section>
+  <div id="app" hidden>
+    <aside id="sidebar" class="sidebar">
+      <div class="brand"><img class="brand-logo" src="/stellar-cortex-mark.svg" width="32" height="32" alt=""><span>StellarCortex</span><div class="sidebar-tools"><button id="search" class="icon sidebar-round" title="Search" aria-label="Search"></button><button class="icon sidebar-round" id="new-chat" title="New chat" aria-label="New chat"></button></div></div>
+      <div id="bot-list" class="bot-list"></div>
+      <div class="sidebar-footer"><nav id="navigation"></nav><button id="account" class="account"></button></div>
+    </aside>
+    <main class="main">
+      <header id="header" class="header"></header>
+      <div id="runtime-notice" class="runtime-notice" hidden></div>
+      <section id="content" class="content"></section>
+      <section id="composer-wrap" class="composer-wrap">
+        <div id="pending-approvals"></div><div id="queue" class="queue"></div>
+        <form id="composer" class="composer">
+          <div id="reply-context" class="reply-context" hidden></div>
+          <div id="attachments" class="attachments"></div>
+          <textarea id="prompt" rows="1" dir="auto" aria-label="Message" placeholder="Message Stellar…"></textarea>
+          <div id="composer-model-controls" class="composer-model-controls"></div>
+          <div class="composer-tools"><div><button type="button" class="icon" id="attach" title="Attach files" aria-label="Attach files"></button><button type="button" class="icon" id="mention" title="Mention a bot" aria-label="Mention a bot">@</button><button type="button" class="icon" id="skill-picker" title="Use a skill" aria-label="Use a skill">/</button></div><div><span id="composer-hint" class="small muted"></span><button type="button" class="icon" id="voice-call" title="Voice call" aria-label="Voice call"></button><button type="button" class="icon" id="dictate" title="Dictate" aria-label="Dictate"></button><button type="submit" class="send" id="send" aria-label="Send message"></button></div></div>
+        </form><div class="composer-caption" id="composer-caption"></div>
+      </section>
+    </main>
+    <aside id="details" class="details" hidden></aside>
+  </div>
+  <aside id="voice-panel" class="voice-panel" aria-labelledby="voice-heading" hidden></aside>
+  <div id="voice-call-mini" class="voice-call-mini" hidden></div>
+  <input id="file-input" type="file" multiple hidden>
+  <dialog id="modal"><div class="modal-top"><h2 id="modal-title"></h2><button id="modal-close" class="icon" aria-label="Close">✕</button></div><div id="modal-body"></div></dialog>
+  <div id="toast" role="status" class="toast" hidden></div>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Normalize text to LF in the repository. Shell, Python and systemd files must stay LF
+# on checkout (a CRLF breaks bash and the Docker entrypoint).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

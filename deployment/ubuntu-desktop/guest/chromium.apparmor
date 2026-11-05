@@ -1,0 +1,7 @@
+abi <abi/4.0>,
+include <tunables/global>
+
+profile stellarcortex-chromium /opt/stellarcortex-browsers/chromium-*/chrome-linux64/chrome flags=(unconfined) {
+  userns,
+  include if exists <local/stellarcortex-chromium>
+}
