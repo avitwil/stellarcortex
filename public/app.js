@@ -492,8 +492,17 @@ function connectEvents() {
         'Connection lost. Reconnecting…',
       );
     }
+    // A browser retries a lost stream by itself, but not after a refused
+    // answer such as a proxy's 502 while the app restarts.
+    if (currentSource.readyState === 2) setTimeout(() => reopenEvents(currentSource), 3000);
   };
   listen('connected', () => refresh().catch(() => {}));
+}
+async function reopenEvents(closed) {
+  if (source !== closed || !state) return;
+  // Refresh first: an ended session goes to login instead of retrying.
+  await refresh().catch(() => {});
+  if (source === closed && state) connectEvents();
 }
 function handleAccountUpdate(event) {
   let action;

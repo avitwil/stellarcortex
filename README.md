@@ -6,7 +6,7 @@
 
 **A self-hosted, open-source workspace of AI teammates for Linux, inspired by Grok Bot.**
 
-Version **0.1.2** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
+Version **0.1.3** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
 
 Create bots when you need them, talk to them, let them delegate work to each other, and follow their conversations and results. Each bot can use its own provider and model: a provider account, an API key, or a local model server you already run.
 
@@ -439,6 +439,8 @@ Some tests need Linux. See [Testing and validation](docs/VALIDATION.md). To publ
 [MIT](LICENSE). The software is provided "as is", without warranty of any kind. StellarCortex is an independent project and is not affiliated with or endorsed by xAI, OpenAI, Anthropic or any other provider. Bundled files, dependencies and downloaded software keep their own licenses and terms: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Some are not open source, and they stay installed from their own source on your machine. Check [Provider terms](#provider-terms) before you connect a service.
 
 ## Version history
+
+**0.1.3** — replies now appear by themselves after the app restarts with a page open. A page open from before the update needs one reload.
 
 **0.1.2** — the new `stcortex` command starts and stops the tool and its virtual computer, and sets what happens at boot. Tailscale can be added after an install with one command. The install output is clearer: it says when the signature is verified, apt stays quiet unless it fails, and the firewall question stands out.
 
