@@ -1,10 +1,14 @@
 [Unit]
 Description=StellarCortex desktop network boundary
+After=nftables.service
 Before=libvirtd.service
+# Reloading nftables usually flushes the whole ruleset, and this table with it.
+ReloadPropagatedFrom=nftables.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/sbin/nft -f /etc/stellarcortex/desktop-network-guard.nft
+ExecReload=/usr/sbin/nft -f /etc/stellarcortex/desktop-network-guard-reload.nft
 ExecStop=/usr/sbin/nft delete table inet scx_desktops
 [Install]
 WantedBy=multi-user.target

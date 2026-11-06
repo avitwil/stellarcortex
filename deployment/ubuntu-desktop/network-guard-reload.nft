@@ -1,0 +1,4 @@
+# One transaction, so the bridge is never without its guard. The first line lets the delete work after a flush.
+add table inet scx_desktops
+delete table inet scx_desktops
+include "/etc/stellarcortex/desktop-network-guard.nft"

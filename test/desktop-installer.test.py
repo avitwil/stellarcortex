@@ -1,4 +1,4 @@
-import base64, contextlib, hashlib, importlib.util, io, pathlib, shutil, subprocess, tarfile, tempfile, types, unittest, json, uuid, os
+import base64, contextlib, hashlib, importlib.util, io, pathlib, re, shutil, subprocess, tarfile, tempfile, types, unittest, json, uuid, os
 from unittest.mock import patch
 
 os.umask(0o022)
@@ -359,105 +359,424 @@ class Tests(unittest.TestCase):
             finally:
                 os.umask(old)
 
-    def test_coexistence_absent_legacy_table_only_is_optional(self):
+    def firewall(self, argv=[], items=[], ufw=None, firewalld=None, iptables='', zones='', **nft):
+        '''Runs the script against stubbed host tools. A tool left at None is not installed.'''
         import types
 
         network = load('coexistence', 'deployment/ubuntu-desktop/network-coexistence.py')
-        env = {
-            'STELLARCORTEX_DESKTOP_FW_INPUT_TABLE': 'host_filter',
-            'STELLARCORTEX_DESKTOP_FW_FORWARD_TABLE': 'guest_forward',
-            'STELLARCORTEX_DESKTOP_UPLINK': 'eth0',
-        }
-        for tables, failed, allowed in [
-            (['host_filter'], 'guest_forward', True),
-            (['host_filter', 'guest_forward'], 'guest_forward', False),
-            ([], 'host_filter', False),
-        ]:
-            calls = []
-
-            def run(args, **kwargs):
-                calls.append(args)
-                if args[:4] == ['nft', '-j', 'list', 'chain']:
-                    return types.SimpleNamespace(
-                        returncode=int(args[5] == failed), stdout=json.dumps({'nftables': []})
-                    )
-                return types.SimpleNamespace(returncode=0)
-
-            with patch.dict(os.environ, env), patch.object(
-                network.sys, 'argv', ['coexistence']
-            ), patch.object(
-                network.subprocess,
-                'check_output',
-                return_value=json.dumps(
-                    {'nftables': [{'table': {'family': 'inet', 'name': t}} for t in tables]}
-                ),
-            ), patch.object(
-                network.subprocess, 'run', run
-            ):
-                if allowed:
-                    network.main()
-                else:
-                    with self.assertRaises(SystemExit):
-                        network.main()
-                    self.assertFalse(any('--check' in c for c in calls))
-
-    def coexistence(self, env, argv=['coexistence'], tables=['filter']):
-        import types
-
-        network = load('coexistence', 'deployment/ubuntu-desktop/network-coexistence.py')
-        calls = []
-        scripts = []
+        guard = [{'table': {'name': 'scx_desktops'}}]
+        calls, scripts = [], []
 
         def run(args, **kwargs):
+            args = list(args)
             calls.append(args)
-            if args[:4] == ['nft', '-j', 'list', 'chain']:
-                return types.SimpleNamespace(returncode=0, stdout=json.dumps({'nftables': []}))
-            if '--check' in args:
-                scripts.append(kwargs['input'])
-            return types.SimpleNamespace(returncode=0)
+            done = lambda out='', code=0: types.SimpleNamespace(returncode=code, stdout=out)
+            if args[:3] == ['nft', '-j', 'list']:
+                if nft.get('unreadable') == 'crash':
+                    raise OSError('no fork')
+                if nft.get('unreadable'):
+                    return done('', 1)
+                reloaded = nft.get('guard') == 'reloads' and ['systemctl', 'reload'] in [
+                    c[:2] for c in calls
+                ]
+                loaded = 'guard' not in nft or reloaded
+                return done(json.dumps({'nftables': (guard if loaded else []) + items}))
+            if args[0] == 'nft':
+                if '--check' in args:
+                    scripts.append(kwargs['input'])
+                return done()
+            present = {'ufw': ufw, 'firewall-cmd': firewalld, 'iptables': iptables}
+            if present.get(args[0], '') is None:
+                raise FileNotFoundError(args[0])
+            if args[0] == 'firewall-cmd' and '--get-zones' in args:
+                return done(zones)
+            if args[0] == 'iptables' and '-S' not in args:
+                return done('', int('-C' in args or '-D' in args))
+            return done(present.get(args[0], ''))
 
-        clean = {k: v for k, v in os.environ.items() if not k.startswith('STELLARCORTEX_DESKTOP_')}
-        with patch.dict(os.environ, {**clean, **env}, clear=True), patch.object(
-            network.sys, 'argv', argv
-        ), patch.object(
-            network.subprocess,
-            'check_output',
-            return_value=json.dumps(
-                {'nftables': [{'table': {'family': 'inet', 'name': t}} for t in tables]}
-            ),
-        ), patch.object(
+        with patch.object(network.sys, 'argv', ['coexistence', *argv]), patch.object(
             network.subprocess, 'run', run
-        ):
-            network.main()
-        return calls, scripts
-
-    def test_coexistence_generic_defaults_use_configured_uplink(self):
-        calls, scripts = self.coexistence({'STELLARCORTEX_DESKTOP_UPLINK': 'enp3s0'})
-        self.assertIn(['nft', '-j', 'list', 'chain', 'inet', 'filter', 'input'], calls)
-        self.assertIn(['nft', '-j', 'list', 'chain', 'inet', 'filter', 'forward'], calls)
-        self.assertIn(
-            'insert rule inet filter forward iifname "virbr-scx" oifname "enp3s0"', scripts[0]
+        ), patch.object(network.shutil, 'copy') as copy, patch.object(
+            network.time, 'sleep', side_effect=[None] * nft.get('rounds', 0) + [SystemExit('end')]
+        ), contextlib.redirect_stdout(
+            io.StringIO()
+        ) as printed:
+            with self.assertRaises(SystemExit) as stopped:
+                network.main()
+        return types.SimpleNamespace(
+            code=stopped.exception.code,
+            calls=calls,
+            script=''.join(scripts),
+            copied=copy.call_args_list,
+            printed=printed.getvalue(),
         )
-        self.assertNotIn('UPLINK', scripts[0])
 
-    def test_coexistence_precheck_rejects_missing_uplink_and_unsafe_names(self):
-        for env, message in [
-            ({}, 'STELLARCORTEX_DESKTOP_UPLINK is not set'),
-            ({'STELLARCORTEX_DESKTOP_UPLINK': 'eth0;flush'}, 'STELLARCORTEX_DESKTOP_UPLINK'),
-            (
-                {
-                    'STELLARCORTEX_DESKTOP_UPLINK': 'eth0',
-                    'STELLARCORTEX_DESKTOP_FW_INPUT_TABLE': 'x y',
-                },
-                'STELLARCORTEX_DESKTOP_FW_INPUT_TABLE',
-            ),
+    def chain(self, name='input', hook='input', policy='accept', **values):
+        return {
+            'chain': {
+                'family': 'inet',
+                'table': 'ownrules',
+                'name': name,
+                'type': 'filter',
+                'hook': hook,
+                'policy': policy,
+                **values,
+            }
+        }
+
+    def rule(self, chain='input', expr=[{'accept': None}], **values):
+        return {
+            'rule': {
+                'family': 'inet',
+                'table': 'ownrules',
+                'chain': chain,
+                'handle': 7,
+                'expr': expr,
+                **values,
+            }
+        }
+
+    def test_a_host_with_nothing_that_blocks_needs_no_rules(self):
+        for items in [
+            [],
+            [self.chain()],
+            [self.chain(), self.rule()],
+            [self.chain(policy='drop', hook='output', name='output')],
+            [self.chain(policy='drop', type='nat')],
         ]:
-            with self.subTest(env=env), self.assertRaisesRegex(SystemExit, message):
-                self.coexistence(env)
+            self.assertEqual(self.firewall(['--check'], items).code, 0, items)
 
-    def test_coexistence_remove_needs_no_uplink(self):
-        calls, _ = self.coexistence({}, argv=['coexistence', '--remove'])
-        self.assertFalse(any('--check' in c for c in calls))
+    def test_a_drop_policy_or_a_drop_rule_needs_rules_and_is_named(self):
+        for items in [
+            [self.chain(policy='drop')],
+            [self.chain(), self.rule(expr=[{'drop': None}])],
+            [self.chain(), self.rule(expr=[{'reject': {'type': 'icmpx'}}])],
+            [self.chain(), self.rule(expr=[{'jump': {'target': 'mine'}}])],
+        ]:
+            done = self.firewall(['--check'], items)
+            self.assertEqual(done.code, 10, items)
+            self.assertIn('ownrules', done.printed)
+
+    def test_rules_go_only_into_blocking_chains_and_name_the_bridge(self):
+        done = self.firewall(
+            items=[
+                self.chain(policy='drop'),
+                self.chain('routed', 'forward', 'drop'),
+                self.chain('open', 'forward'),
+            ]
+        )
+        lines = done.script.splitlines()
+        self.assertEqual(done.code, 0)
+        self.assertEqual(len(lines), 5)
+        self.assertEqual(sum(' ownrules input ' in line for line in lines), 3)
+        self.assertEqual(sum(' ownrules routed ' in line for line in lines), 2)
+        self.assertNotIn(' open ', done.script)
+        for line in lines:
+            self.assertTrue(line.startswith('insert rule inet ownrules '), line)
+            self.assertIn('"virbr-scx"', line)
+            self.assertIn('comment "scx-desktop-', line)
+        self.assertNotIn('dport 22', done.script)
+        self.assertNotRegex(done.script, 'flush|policy|oifname "(?!virbr-scx)')
+        self.assertIn('ct state established,related', lines[-1] + lines[-2])
+
+    def test_tables_other_tools_own_are_left_alone(self):
+        items = [
+            self.chain(policy='drop', table=table)
+            for table in ['scx_desktops', 'firewalld', 'libvirt_network']
+        ] + [self.chain('INPUT', policy='drop', family='ip', table='filter')]
+        self.assertEqual(self.firewall(['--check'], items).code, 0)
+        self.assertEqual(self.firewall(items=items).script, '')
+        own = self.chain('input', policy='drop', family='ip', table='filter')
+        self.assertIn('insert rule ip filter input', self.firewall(items=[own]).script)
+
+    def test_a_second_run_adds_nothing(self):
+        rules = [
+            self.rule(comment=comment)
+            for comment in ['scx-desktop-dhcp', 'scx-desktop-dns-udp', 'scx-desktop-dns-tcp']
+        ]
+        done = self.firewall(items=[self.chain(policy='drop'), *rules])
+        self.assertEqual(done.script, '')
+        self.assertFalse([c for c in done.calls if c[:2] == ['nft', '-f']])
+
+    def test_an_odd_chain_name_stops_before_anything_changes(self):
+        done = self.firewall(items=[self.chain('in;flush ruleset', policy='drop')])
+        self.assertIn('Unexpected chain name', done.code)
+        self.assertEqual(done.script, '')
+
+    def test_no_guard_means_no_rules(self):
+        done = self.firewall(items=[self.chain(policy='drop')], guard=False)
+        self.assertIn('network guard', done.code)
+        self.assertEqual(done.script, '')
+
+    def test_a_ruleset_that_cannot_be_read_is_never_read_as_no_firewall(self):
+        for argv in [['--check'], []]:
+            done = self.firewall(argv, unreadable=True)
+            self.assertIn('No rules were changed', done.code)
+            self.assertEqual(done.script, '')
+
+    def test_remove_takes_only_our_rules_from_every_tool(self):
+        items = [
+            self.chain(policy='drop'),
+            self.rule(handle=1, comment='scx-desktop-dhcp'),
+            self.rule(handle=2, comment='scx-desktop-public-out', chain='forward'),
+            self.rule(handle=3, comment='ssh'),
+            self.rule(handle=4),
+        ]
+        done = self.firewall(['--remove'], items, ufw='ufw 0.36')
+        self.assertEqual(
+            done.script,
+            'delete rule inet ownrules input handle 1\ndelete rule inet ownrules forward handle 2\n',
+        )
+        ufw = [c for c in done.calls if c[0] == 'ufw' and c[1] != 'version']
+        self.assertEqual(len(ufw), 4)
+        self.assertEqual(ufw[-1][:3], ['ufw', 'route', 'delete'])
+        self.assertTrue(all(c[1] == 'delete' for c in ufw[:3]))
+        self.assertTrue(all('virbr-scx' in c for c in ufw))
+        self.assertEqual(len([c for c in done.calls if '-D' in c]), 5)
+
+    def test_ufw_gets_rules_for_the_bridge_alone(self):
+        self.assertEqual(self.firewall(['--check'], ufw='Status: active').code, 10)
+        self.assertEqual(self.firewall(['--check'], ufw='Status: inactive').code, 0)
+        done = self.firewall(ufw='Status: active', iptables='-P FORWARD DROP')
+        rules = [c for c in done.calls if c[0] == 'ufw' and c[1] != 'status']
+        self.assertEqual(len(rules), 4)
+        self.assertTrue(all('virbr-scx' in c and 'in' in c for c in rules))
+        self.assertEqual(rules[-1][:3], ['ufw', 'route', 'allow'])
+        self.assertFalse([c for c in done.calls if '-I' in c], 'ufw owns iptables there')
+
+    def test_firewalld_uses_the_libvirt_zone_or_a_zone_of_ours(self):
+        self.assertEqual(self.firewall(['--check'], firewalld='running\n').code, 10)
+        changed = lambda done: [c for c in done.calls if c[0] == 'firewall-cmd' and len(c) > 2]
+        kept = self.firewall(firewalld='running\n', zones='public libvirt')
+        self.assertFalse([c for c in changed(kept) if '--get-zones' not in c])
+        made = self.firewall(firewalld='running\n', zones='public')
+        zone = next(c[2] for c in changed(made) if c[2].startswith('--new-zone='))
+        self.assertLessEqual(len(zone.split('=')[1]), 17, 'firewalld refuses a longer name')
+        self.assertIn(['firewall-cmd', '--reload'], made.calls)
+        self.assertTrue(any('--add-interface=virbr-scx' in c for c in made.calls))
+        gone = self.firewall(['--remove'], firewalld='running\n', zones='public scx-desktops')
+        self.assertIn(['firewall-cmd', '--permanent', '--delete-zone=scx-desktops'], gone.calls)
+
+    def test_iptables_rules_are_seen_and_added_at_the_top(self):
+        for rules in ['-P FORWARD DROP\n', '-P INPUT ACCEPT\n-A INPUT -p tcp -j REJECT\n']:
+            self.assertEqual(self.firewall(['--check'], iptables=rules).code, 10, rules)
+        self.assertEqual(self.firewall(['--check'], iptables='-P INPUT ACCEPT\n').code, 0)
+        done = self.firewall(iptables='-P FORWARD DROP\n')
+        added = [c for c in done.calls if '-I' in c]
+        self.assertEqual(len(added), 5)
+        for call in added:
+            self.assertEqual(call[:2], ['iptables', '-w'])
+            self.assertEqual(call[-2:], ['-j', 'ACCEPT'])
+            self.assertTrue('-i' in call or '-o' in call)
+            self.assertIn('virbr-scx', call)
+
+    def test_the_watch_puts_back_what_a_reload_cleared(self):
+        done = self.firewall(['--watch'], [self.chain(policy='drop')], rounds=1)
+        self.assertEqual(len(done.script.splitlines()), 3)
+        again = self.firewall(['--watch'], rounds=1, iptables='-P FORWARD DROP\n')
+        self.assertEqual(len([c for c in again.calls if '-I' in c]), 5)
+
+    def test_the_watch_brings_back_a_guard_that_a_flush_took(self):
+        done = self.firewall(['--watch'], [self.chain(policy='drop')], rounds=1, guard='reloads')
+        self.assertIn(
+            ['systemctl', 'reload', 'stellarcortex-desktop-network-guard.service'], done.calls
+        )
+        self.assertEqual(len(done.script.splitlines()), 3)
+
+    def test_the_watch_outlives_a_failure_and_reports_it_once(self):
+        done = self.firewall(['--watch'], [self.chain(policy='drop')], rounds=3, guard='gone')
+        self.assertEqual(done.code, 'end', 'only the stop ends it')
+        self.assertEqual(done.printed.count('could not be put back'), 1)
+        self.assertEqual(done.script, '')
+
+    def test_the_watch_outlives_an_unexpected_error(self):
+        done = self.firewall(['--watch'], rounds=2, unreadable='crash')
+        self.assertEqual(done.code, 'end')
+        self.assertEqual(done.printed.count('no fork'), 1)
+
+    def test_the_watch_leaves_ufw_and_firewalld_to_keep_their_own_rules(self):
+        for tool in [{'ufw': 'Status: active'}, {'firewalld': 'running\n'}]:
+            done = self.firewall(['--watch'], rounds=2, **tool)
+            self.assertFalse([c for c in done.calls if 'allow' in c or '--new-zone' in c[-1]])
+
+    def test_a_zone_goes_even_when_firewalld_is_stopped(self):
+        done = self.firewall(['--remove'], firewalld='not running\n')
+        self.assertIn(['firewall-offline-cmd', '--delete-zone=scx-desktops'], done.calls)
+
+    def test_stopping_the_unit_removes_the_rules_and_nothing_brings_them_back(self):
+        unit = (ROOT / 'deployment/ubuntu-desktop/network-coexistence.service').read_text()
+        self.assertIn('--watch', unit[unit.index('ExecStart=') :])
+        self.assertRegex(unit, r'ExecStopPost=.*--remove')
+        self.assertNotIn('ExecStop=', unit)
+        self.assertNotIn('RemainAfterExit', unit)
+        self.assertRegex(unit, r'ExecStartPre=\S+ -I -B \S+\n', 'a failed apply fails the start')
+        name = 'stellarcortex-desktop-network-coexistence.service'
+        with tempfile.TemporaryDirectory() as d:
+            out, _ = self._bundle(d)
+            broker = (out / 'broker-coexistence.unit').read_text()
+            lines = dict(line.split('=', 1) for line in broker.splitlines() if '=' in line)
+            self.assertIn(name, lines['After'])
+            self.assertNotIn(name, lines['Requires'])
+            self.assertNotIn('Wants', lines)
+        for file in ['boot.service', 'computer-start.service']:
+            text = (ROOT / 'deployment/ubuntu-desktop' / file).read_text()
+            self.assertNotRegex(text, r'(Requires|Wants)=.*coexistence')
+
+    def test_the_guard_check_repairs_only_a_guard_that_went_missing(self):
+        here = ROOT / 'deployment/ubuntu-desktop'
+        unit = (here / 'network-guard-check.service').read_text()
+        guard = 'stellarcortex-desktop-network-guard.service'
+        self.assertEqual(
+            re.findall(r'^ExecStart=(.*)$', unit, re.M), ['/usr/bin/systemctl reload ' + guard]
+        )
+        self.assertIn('ExecCondition=/usr/bin/systemctl is-active --quiet ' + guard, unit)
+        self.assertNotIn('coexistence', unit)
+        self.assertNotIn('[Install]', unit)
+        condition = re.search(r"^ExecCondition=/bin/sh -c '(.*)'$", unit, re.M)[1]
+        part = 'if ' + condition + '; then echo REPAIR; fi'
+        with tempfile.TemporaryDirectory() as d:
+            self.assertIn('REPAIR', self.shell(d, 'nft(){ return 1; }', part).stdout)
+            self.assertNotIn('REPAIR', self.shell(d, 'nft(){ return 0; }', part).stdout)
+
+    def test_the_guard_check_is_on_every_install_and_needs_no_firewall_answer(self):
+        timer = 'stellarcortex-desktop-guard-check.timer'
+        here = ROOT / 'deployment/ubuntu-desktop'
+        text = (here / 'network-guard-check.timer').read_text()
+        self.assertIn('WantedBy=timers.target', text)
+        self.assertIn('OnCalendar=', text)
+        with tempfile.TemporaryDirectory() as d:
+            out, _ = self._bundle(d)
+            self.assertTrue((out / timer).is_file())
+            self.assertTrue((out / timer.replace('.timer', '.service')).is_file())
+            script = (out / 'install-approved.sh').read_text()
+            line = f'systemctl enable {timer}\nsystemctl start {timer}\n'
+            self.assertIn('./*.timer /etc/systemd/system/', script)
+            self.assertGreater(script.index(line), script.index('systemctl daemon-reload'))
+            block = script[script.index('if [ -n "$coexistence" ]') : script.index(line)]
+            self.assertEqual(block.count('if [ -n'), block.count('\nfi\n'), 'outside the firewall')
+
+    def test_an_upgrade_adds_the_guard_check_once_and_keeps_an_owners_disable(self):
+        timer = 'stellarcortex-desktop-guard-check.timer'
+        with tempfile.TemporaryDirectory() as d:
+            out, _ = self._bundle(d)
+            text = (out / 'upgrade-approved.sh').read_text()
+            self.assertIn('./*.timer /etc/systemd/system/', text)
+            part = text[text.index('guard_check=\n') : text.index('install -m 644 ./*.service')]
+            installed = pathlib.Path(d) / timer
+            part = part.replace('/etc/systemd/system/' + timer, installed.as_posix())
+            part += '\necho "state=$guard_check"'
+            self.assertIn('state=new', self.shell(d, '', part).stdout)
+            installed.touch()
+            self.assertIn('state=\n', self.shell(d, '', part).stdout)
+            line = next(row for row in text.splitlines() if 'enable ' + timer in row)
+            self.assertTrue(line.startswith('[ -z "$guard_check" ] ||'), line)
+            self.assertLess(text.index(line), text.rindex('trap - ERR'))
+            self.assertIn('|| echo', line)
+
+    def test_nothing_that_starts_at_boot_brings_the_guard_check_or_the_rules_back(self):
+        here = ROOT / 'deployment/ubuntu-desktop'
+        for file in here.glob('*.service'):
+            for row in file.read_text().splitlines():
+                if row.startswith(('Requires=', 'Wants=', 'BindsTo=')):
+                    self.assertNotIn('guard-check', row, file.name)
+                    self.assertNotIn('coexistence', row, file.name)
+
+    def test_a_firewall_problem_does_not_undo_an_update(self):
+        with tempfile.TemporaryDirectory() as d:
+            out, _ = self._bundle(d)
+            text = (out / 'upgrade-approved.sh').read_text()
+            line = next(row for row in text.splitlines() if 'try-restart' in row)
+            self.assertIn('coexistence.service || echo', line)
+            self.assertLess(text.index(line), text.rindex('trap - ERR'))
+
+    def test_the_guard_reloads_after_nftables_in_one_transaction(self):
+        here = ROOT / 'deployment/ubuntu-desktop'
+        unit = (here / 'network-guard.service').read_text()
+        self.assertRegex(unit, r'After=.*nftables\.service')
+        self.assertEqual(unit.count('ExecReload='), 1)
+        self.assertIn('desktop-network-guard-reload.nft', unit)
+        lines = [
+            line
+            for line in (here / 'network-guard-reload.nft').read_text().splitlines()
+            if not line.startswith('#')
+        ]
+        self.assertEqual(lines[0], 'add table inet scx_desktops')
+        self.assertEqual(lines[1], 'delete table inet scx_desktops')
+        self.assertIn('/etc/stellarcortex/desktop-network-guard.nft', lines[2])
+        with tempfile.TemporaryDirectory() as d:
+            out, _ = self._bundle(d)
+            self.assertTrue((out / 'desktop-network-guard-reload.nft').is_file())
+            for script in ['install-approved.sh', 'upgrade-approved.sh']:
+                self.assertRegex(
+                    (out / script).read_text(),
+                    r'install -m 644 .*desktop-network-guard-reload\.nft /etc/stellarcortex/',
+                )
+
+    def test_the_fix_command_installs_and_starts_the_rules(self):
+        done = self.firewall(['--install'])
+        self.assertEqual(done.code, 0)
+        self.assertEqual(len(done.copied), 2)
+        unit = 'stellarcortex-desktop-network-coexistence.service'
+        self.assertIn(['systemctl', 'enable', unit], done.calls)
+        self.assertIn(['systemctl', 'restart', unit], done.calls)
+
+    def test_rules_come_back_after_a_firewall_reload_and_go_on_stop(self):
+        for name in ['network-coexistence.service', 'network-guard.service']:
+            unit = (ROOT / 'deployment/ubuntu-desktop' / name).read_text()
+            self.assertIn('ReloadPropagatedFrom=nftables.service', unit)
+            self.assertNotIn('PartOf', unit, 'a start of nftables would not bring it back')
+            self.assertIn('ExecReload=', unit)
+            self.assertIn('WantedBy=multi-user.target', unit)
+        unit = (ROOT / 'deployment/ubuntu-desktop/network-coexistence.service').read_text()
+        self.assertIn('network-coexistence.py --remove', unit)
+        self.assertNotIn('EnvironmentFile', unit)
+
+    def watched(self, p, leases, seconds, statefile, mac='52:54:00:aa:bb:cc'):
+        said = []
+
+        def virsh(*args):
+            said.append(args)
+            return {
+                'domstate': 'running',
+                'domiflist': ' vnet0 network stellarcortex-desktops virtio ' + mac,
+                'net-dhcp-leases': leases,
+            }.get(args[0], '')
+
+        with patch.object(installer, 'virsh', virsh), patch.object(
+            installer, 'assert_identity'
+        ), patch.object(installer.time, 'time', lambda: seconds):
+            state = installer.advance(p, statefile)
+        return state, said
+
+    def test_a_computer_with_no_address_fails_plainly_instead_of_waiting(self):
+        p = self.fixture()
+        stale = '2026 52:54:00:00:00:01 ipv4 192.168.153.100/24 ubuntu'
+        with tempfile.TemporaryDirectory() as d:
+            file = pathlib.Path(d) / 'state.json'
+            file.write_text(json.dumps({'stage': 'installing', 'planHash': installer.plan_hash(p)}))
+            state, _ = self.watched(p, '', 1000, file)
+            self.assertEqual(state['waitingSince'], 1000)
+            self.assertEqual(json.loads(file.read_text())['waitingSince'], 1000)
+            state, _ = self.watched(p, stale, 1000 + installer.LEASE_WAIT, file)
+            self.assertEqual(state['stage'], 'installing', 'a lease of an old computer is no proof')
+            with self.assertRaises(installer.BuildError) as stopped:
+                self.watched(p, stale, 1001 + installer.LEASE_WAIT, file)
+            self.assertEqual(installer.failure_code(stopped.exception), 'network')
+
+    def test_a_computer_that_got_an_address_is_left_to_install(self):
+        p = self.fixture()
+        lease = '2026 52:54:00:aa:bb:cc ipv4 192.168.153.100/24 ubuntu'
+        with tempfile.TemporaryDirectory() as d:
+            file = pathlib.Path(d) / 'state.json'
+            file.write_text(
+                json.dumps(
+                    {'stage': 'installing', 'planHash': installer.plan_hash(p), 'waitingSince': 1}
+                )
+            )
+            self.assertTrue(self.watched(p, lease, 2, file)[0]['leased'])
+            state, said = self.watched(p, '', 10**9, file)
+            self.assertEqual(state['stage'], 'installing')
+            self.assertEqual([args[0] for args in said], ['domstate'])
 
     def test_host_bundle_pins_source_snapshot_and_has_no_activation(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1361,30 +1680,27 @@ class Tests(unittest.TestCase):
                 self.assertTrue(installer.finish_install(p))
             self.assertNotIn('unsafe', (root / installer.domain(p) / 'installed.xml').read_text())
 
-    def test_the_firewall_guard_fires_on_a_real_ruleset(self):
-        # More than a pipe holds, so a reader that stops early breaks the writer, as nft does on a real host.
-        firewall = "nft(){ printf 'table inet hostfw {\\n chain input {\\n  type filter hook input priority 0;\\n';printf '%0300000d\\n' 0;printf ' }\\n}\\n'; }"
+    def test_the_install_stops_at_a_firewall_nobody_said_yes_to(self):
+        check = (
+            lambda code: "nft(){ :; }; python3(){ echo 'nftables table own'; return %d; }" % code
+        )
         with tempfile.TemporaryDirectory() as d:
             out, _ = self._bundle(d)
             text = (out / 'install-approved.sh').read_text()
             part = text[text.index('firewall=\n') : text.index('apt-get update')]
-            stopped = self.shell(d, firewall, part, 'hash')
-            self.assertNotEqual(stopped.returncode, 0)
-            self.assertIn('Existing firewall detected', stopped.stdout)
-            self.assertIn('table inet hostfw', stopped.stdout)
+            stopped = self.shell(d, check(10), part, 'hash')
+            self.assertEqual(stopped.returncode, 1)
+            self.assertIn('Existing firewall detected (nftables table own)', stopped.stdout)
             self.assertNotIn('PASSED', stopped.stdout)
             self.assertIn(
-                'PASSED', self.shell(d, firewall, part, 'hash', '--firewall-reviewed').stdout
+                'PASSED', self.shell(d, check(10), part, 'hash', '--firewall-reviewed').stdout
             )
-            self.assertIn(
-                'PASSED',
-                self.shell(d, "nft(){ printf 'table inet empty {\\n}\\n'; }", part, 'hash').stdout,
+            self.assertIn('PASSED', self.shell(d, check(0), part, 'hash').stdout)
+            unknown = self.shell(d, check(1), part, 'hash')
+            self.assertEqual(
+                unknown.returncode, 6, 'an unreadable ruleset is no proof of no firewall'
             )
-            self.assertNotIn(
-                'PASSED',
-                self.shell(d, 'nft(){ return 1; }', part, 'hash').stdout,
-                'an unreadable ruleset is no proof of no firewall',
-            )
+            self.assertNotIn('PASSED', unknown.stdout)
 
     def test_an_upgrade_sees_a_computer_being_prepared(self):
         busy = "systemctl(){ printf 'stellarcortex-computer-build@start.service loaded active running\\n';printf '%0300000d\\n' 0; }"
@@ -1495,9 +1811,11 @@ class Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             out, _ = self._bundle(d)
             text = (out / 'install-approved.sh').read_text()
-            self.assertIn('!= --firewall-reviewed', text)
+            self.assertIn('= --firewall-reviewed', text)
             self.assertIn('nothing was changed', text)
-            self.assertIn('desktop-network-coexistence.env', text)
+            self.assertNotIn('.env', text)
+            self.assertNotIn('left as it is. Allow', text)
+            self.assertIn('exit 6', text[text.index('coexistence.service ||') :])
             self.assertLess(
                 text.index('Existing firewall detected'),
                 text.index('apt-get update'),

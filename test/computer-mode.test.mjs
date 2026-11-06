@@ -289,7 +289,7 @@ m.render(pathlib.Path(sys.argv[2]),pathlib.Path(sys.argv[3]),4242,'a'*64,'stella
   );
   assert.match(
     fs.readFileSync(path.join(out, 'install-approved.sh'), 'utf8'),
-    /install -m 644 \.\/\*\.service \/etc\/systemd\/system\//,
+    /install -m 644 \.\/\*\.service \.\/\*\.timer \/etc\/systemd\/system\//,
   );
   // A unit must not depend on a folder that only the bundle creates.
   for (const [name, folder] of [

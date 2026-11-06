@@ -1,12 +1,15 @@
 [Unit]
 Description=StellarCortex desktop bridge coexistence rules
 Requires=stellarcortex-desktop-network-guard.service
-After=stellarcortex-desktop-network-guard.service libvirtd.service nftables.service
+After=stellarcortex-desktop-network-guard.service libvirtd.service nftables.service ufw.service firewalld.service netfilter-persistent.service docker.service
+# Reloading the host firewall clears rules in its chains, so they go back in with it.
+ReloadPropagatedFrom=nftables.service
 [Service]
-Type=oneshot
-RemainAfterExit=yes
-EnvironmentFile=-/etc/stellarcortex/desktop-network-coexistence.env
-ExecStart=/usr/bin/python3 /etc/stellarcortex/desktop-network-coexistence.py
-ExecStop=/usr/bin/python3 /etc/stellarcortex/desktop-network-coexistence.py --remove
+Type=simple
+ExecStartPre=/usr/bin/python3 -I -B /etc/stellarcortex/desktop-network-coexistence.py
+ExecStart=/usr/bin/python3 -I -B /etc/stellarcortex/desktop-network-coexistence.py --watch
+ExecReload=/usr/bin/python3 -I -B /etc/stellarcortex/desktop-network-coexistence.py
+# After the watch has gone, so it cannot put a rule back, and after a failed start too.
+ExecStopPost=/usr/bin/python3 -I -B /etc/stellarcortex/desktop-network-coexistence.py --remove
 [Install]
 WantedBy=multi-user.target

@@ -6,7 +6,7 @@
 
 **A self-hosted, open-source workspace of AI teammates for Linux, inspired by Grok Bot.**
 
-Version **0.1.0** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
+Version **0.1.1** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
 
 Create bots when you need them, talk to them, let them delegate work to each other, and follow their conversations and results. Each bot can use its own provider and model: a provider account, an API key, or a local model server you already run.
 
@@ -152,6 +152,8 @@ df -BG /var/lib    # "Avail": 90G or more
 ```
 
 On a host that fails, the install finishes without the virtual computer and says why. Bots still chat, use their browser, memory, Library files, connections and Kanban. They have no shell and no desktop, and a Kanban validation stage needs a bot with a computer. Host control exists, but it runs a bot as the server's own user, so read [Bot computers](#computer) before you turn it on. If you fix the cause later, run `bash install.sh --service` again.
+
+If the host has a firewall, the install asks once and adds rules for the computer's own bridge only. Your rules and SSH stay as they are. If you say no, the install finishes without the computer.
 
 <a id="run-local"></a>
 ### 1. On your own Linux machine
@@ -380,6 +382,7 @@ If the button is not available, as in Docker, see [Recovery](docs/RECOVERY.md).
 | Codex or Claude shows disconnected | Sign in on the server as the same OS user, check eligibility and quota, then refresh in Settings. |
 | Chromium is missing or will not start | Run `node node_modules/playwright/cli.js install chromium`; on Debian/Ubuntu also `sudo npx playwright install-deps chromium`. |
 | A bot has no desktop | Check its mode in **Settings → Computer**. Host control needs an X11 session. |
+| The computer stops with "no network address" | The host firewall blocks it. Run `sudo python3 /var/lib/stellarcortex/kit/deployment/ubuntu-desktop/network-coexistence.py --install`, then press **Retry** in **Settings → Computer**. |
 | The local model is unreachable | Check that it runs and is reachable from the server. |
 | An MCP connection is saved but inactive | Connect it in Connect apps. MCP servers do not reconnect automatically after a restart. |
 | Microphone or audio does not work | Check permission, browser support and localhost/HTTPS. Realtime needs an OpenAI API connection. |
@@ -416,5 +419,7 @@ Some tests need Linux. See [Testing and validation](docs/VALIDATION.md). To publ
 [MIT](LICENSE). The software is provided "as is", without warranty of any kind. StellarCortex is an independent project and is not affiliated with or endorsed by xAI, OpenAI, Anthropic or any other provider. Bundled files, dependencies and downloaded software keep their own licenses and terms: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Some are not open source, and they stay installed from their own source on your machine. Check [Provider terms](#provider-terms) before you connect a service.
 
 ## Version history
+
+**0.1.1** — the virtual computer now works on hosts with a firewall. The install finds nftables, ufw, firewalld or iptables, asks once and adds rules for its own bridge only. A computer that gets no network stops with a clear message and the fix. A small check restores the network guard if a firewall reload removes it.
 
 **0.1.0** — first public release: multi-provider bots (Codex, Claude Code, API and local models), team hand-offs, memory, skills, routines and webhooks, Kanban projects, MCP and Google connections, voice calls, a computer mode for each bot (none, a virtual computer on KVM, or host control), per-bot permission policy, and GitHub update checks.

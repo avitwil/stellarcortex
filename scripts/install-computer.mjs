@@ -15,7 +15,10 @@ const REASONS = {
   systemd: 'This host has no systemd.',
   root: 'The root step did not finish. Check that your user can use sudo.',
   node: 'Root cannot find Node.js and npm. Install them for the whole system, not only for your user.',
-  firewall: 'The firewall question was not answered with yes, so nothing was changed.',
+  firewall:
+    'The firewall question was not answered with yes, so nothing was changed. The computer is not ready, and chat works. To add it, run this install again and answer yes.',
+  'firewall-unknown':
+    'The firewall could not be read or changed, so the computer is not ready. Chat works. The install output says why. Fix that, then run this install again.',
   failed: 'The root step stopped. Its output is above.',
 };
 export function computerBlocker({
@@ -48,9 +51,11 @@ export function rootResult(status) {
       ? 'firewall'
       : status === 4
         ? 'node'
-        : status === null || status === 1
-          ? 'root'
-          : 'failed';
+        : status === 6
+          ? 'firewall-unknown'
+          : status === null || status === 1
+            ? 'root'
+            : 'failed';
 }
 function main() {
   const root = path.dirname(path.dirname(fileURLToPath(import.meta.url))),

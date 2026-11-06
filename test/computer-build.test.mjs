@@ -333,35 +333,73 @@ test('every way through the install gets the browser libraries, and a failure na
     'the path with a computer',
   );
 });
-test('the firewall check runs with nft present, and sees ufw on any backend', t => {
+test('the firewall question comes from the real check, and the answer decides', t => {
   const text = fs.readFileSync(
       new URL('../deployment/ubuntu-desktop/host-install.sh', import.meta.url),
       'utf8',
     ),
-    check = text.slice(text.indexOf('flag=\n'), text.indexOf('python3 -I -B'));
+    check = text
+      .slice(
+        text.indexOf('flag=\n'),
+        text.indexOf('python3 -I -B "$kit/deployment/ubuntu-desktop/host-setup.py"'),
+      )
+      .replace('</dev/tty', '');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scx-firewall-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const stub = (name, body) =>
       fs.writeFileSync(path.join(dir, name), '#!/bin/sh\n' + body + '\n', { mode: 0o755 }),
-    run = () =>
-      spawnSync('bash', ['-c', 'set -euo pipefail\nPATH="$PWD:$PATH"\n' + check + '\nexit 0'], {
-        cwd: dir,
-        encoding: 'utf8',
-      }).status;
-  stub(
-    'apt-get',
-    `printf '#!/bin/sh\\necho "chain input { type filter hook input priority 0; }"\\n' > nft; chmod +x nft`,
-  );
-  assert.equal(
-    run(),
-    3,
-    'nft arrives with this step, so the ruleset is seen and the question asked, here with no answer',
-  );
-  stub('nft', 'exit 0');
-  stub('ufw', 'echo "Status: active"');
-  assert.equal(run(), 3, 'ufw on the legacy backend leaves no nft ruleset');
-  stub('ufw', 'echo "Status: inactive"');
-  assert.equal(run(), 0, 'a host with no firewall is not asked');
+    run = (input = '') =>
+      spawnSync(
+        'bash',
+        ['-c', 'set -euo pipefail\nPATH="$PWD:$PATH"\nkit=.\n' + check + '\necho "flag=$flag"'],
+        { cwd: dir, encoding: 'utf8', input },
+      );
+  stub('apt-get', 'printf "#!/bin/sh\\n" > nft; chmod +x nft');
+  stub('python3', 'test -x nft || exit 1; echo nftables table own; exit 10');
+  assert.equal(run().status, 3, 'nft arrives first, and no answer is a no');
+  assert.match(run().stdout, /firewall \(nftables table own\).*\n.*virbr-scx, and nothing else/);
+  assert.equal(run('n\n').status, 3);
+  assert.match(run('y\n').stdout, /flag=--firewall-reviewed/);
+  stub('python3', 'exit 0');
+  const clear = run();
+  assert.equal(clear.status, 0);
+  assert.match(clear.stdout, /flag=\n/, 'a host with nothing that blocks is not asked');
+  stub('python3', 'echo "Could not read" >&2; exit 1');
+  assert.equal(run('y\n').status, 6, 'a firewall that cannot be read is never read as none');
+});
+test('a firewall failure during the install keeps its own exit code', t => {
+  const text = fs.readFileSync(
+      new URL('../deployment/ubuntu-desktop/host-install.sh', import.meta.url),
+      'utf8',
+    ),
+    start = text.indexOf('code=0\nSTELLARCORTEX_APP_RESTARTS'),
+    step = text.slice(start, text.indexOf('\n', text.indexOf('exit 5; }', start)));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scx-firewall-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(dir, 'APPROVAL-SHA256'), 'h');
+  const run = code => {
+    fs.writeFileSync(path.join(dir, 'install-approved.sh'), '#!/bin/sh\nexit ' + code + '\n', {
+      mode: 0o755,
+    });
+    return spawnSync(
+      'bash',
+      ['-c', "set -Eeuo pipefail\ntrap 'exit 5' ERR\nbundle=.\nflag=\n" + step + '\nexit 0'],
+      { cwd: dir },
+    ).status;
+  };
+  assert.equal(run(0), 0);
+  assert.equal(run(6), 6);
+  assert.equal(run(1), 5);
+});
+test('the install says plainly what a firewall left undone, and how to finish', () => {
+  for (const code of ['firewall', 'firewall-unknown'])
+    assert.match(computerInstallText(code, en), /run the install again/, code);
+  assert.match(computerInstallText('firewall-unknown', en), /not ready.*Chat works/);
+  const text = computerFailureText('network', en);
+  assert.match(text, /no network address/);
+  assert.match(text, /Chat works/);
+  assert.match(text, /network-coexistence\.py --install/);
+  assert.match(text, /Retry/);
 });
 test('first boot goes on from the step that stopped, and its marker holds the cause', t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scx-firstboot-'));
@@ -505,6 +543,7 @@ test('a host that cannot have a computer finishes without one and says why', () 
   assert.equal(rootResult(0), null);
   assert.equal(rootResult(3), 'firewall');
   assert.equal(rootResult(4), 'node');
+  assert.equal(rootResult(6), 'firewall-unknown');
   assert.equal(rootResult(1), 'root');
   assert.equal(rootResult(null), 'root');
   assert.equal(rootResult(2), 'failed');
@@ -528,6 +567,7 @@ test('every build state and failure reads in the owner language, with no raw Eng
     'iso',
     'browser-hash',
     'first-boot',
+    'network',
     'timeout',
     'interrupted',
     'other',
@@ -548,6 +588,7 @@ test('every build state and failure reads in the owner language, with no raw Eng
     'root',
     'node',
     'firewall',
+    'firewall-unknown',
     undefined,
   ])
     assert.match(computerInstallText(code, he), hebrew, String(code));

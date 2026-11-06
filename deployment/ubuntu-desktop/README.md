@@ -36,36 +36,40 @@ Rendering runs `npm ci` in that clone, so root needs Node.js and npm. The render
 
 `bash install.sh --desktop-host-bundle --help` describes the portable bundle renderer. **Render as root, from a root-owned clone of this repository, into a folder only root can reach.** Root runs what the bundle holds, and a host-mode bot runs as the app user, so the renderer refuses a source that user owns and the bundle scripts refuse files or folders others can change. Rendering does not install packages or activate services. Supply the actual app UID, service name, a new output directory, and `--iso` with the path of your verified Ubuntu Server ISO. The bundle records that file's hash, not a fixed version, and the installer copies it to `/var/lib/stellarcortex/desktops/media/`, next to the guest payload. Start the app once first: the renderer derives the owner identity from the access key in its data folder, unless you give `--account-id`. It writes the app data folder into `desktop-provider.json`: it reads `--data-dir` or `STELLARCORTEX_DATA_DIR` from the service and its environment files, then falls back to `.stellarcortex` in the owner's home. Review the generated manifest, exact package/network changes and approval hash before running the generated privileged installer. `install-approved.sh` also writes `provisioningPolicy` with those values, and it refuses an existing desktop configuration. For a host that is already set up, render a bundle from the new code and run `upgrade-approved.sh` with the same hash: it stops if a computer is being prepared, backs up the configuration, units and runtime under `/var/lib/stellarcortex/desktops/backups/`, replaces the runtime and units, restarts the broker, and refreshes only `provisioningPolicy` and `dataDir`. Registrations, sessions and your boot choice stay, and it does not touch the firewall or network. Computers that already exist keep the guest code they were installed with. Keep generated bundles and deployment configs out of Git.
 
-The components use private Unix VNC/QMP and guest-session sockets with an authenticated existing-origin WebSocket display, not public VNC/debugging ports. The example network is dedicated NAT, with no LAN bridge or public inbound access. Firewall coexistence must be assessed for the actual host; the optional coexistence scripts are not universal host-firewall setup. No broad sudo or libvirt group access is necessary for the application.
+The components use private Unix VNC/QMP and guest-session sockets with an authenticated existing-origin WebSocket display, not public VNC/debugging ports. The example network is dedicated NAT, with no LAN bridge or public inbound access. See [Firewall](#firewall) for how it works with a host firewall. No broad sudo or libvirt group access is necessary for the application.
 
-## Firewall coexistence (optional)
+## Firewall
 
-`network-coexistence.py` (installed by `install-approved.sh --firewall-reviewed` when the env file below exists) inserts five commented rules into an existing nftables host firewall so guests on `virbr-scx` (192.168.153.0/24) get DHCP, DNS and outbound NAT traffic. It never creates tables or chains, flushes or changes chain policy; `--remove` deletes only its own rules.
+The computer needs DHCP and DNS from the host, and outbound traffic, on its bridge `virbr-scx`. When a host firewall could block that, the install names it and asks once. With a yes, `network-coexistence.py` finds the firewall and adds what the bridge needs. There is nothing to configure.
 
-Prerequisites: `nft` installed; an existing `inet` table with an input chain that filters host traffic; optionally an `inet` table with a forward chain (if that table does not exist, forward rules are skipped); the name of the host uplink interface. Configure them in `/etc/stellarcortex/desktop-network-coexistence.env`, which the unit reads. Start from [`network-coexistence.env.example`](network-coexistence.env.example):
+| Firewall | What is added |
+|---|---|
+| nftables | Three commented rules at the top of each base `input` filter chain that can drop traffic, and two in each such `forward` chain |
+| ufw | Three `allow in on virbr-scx` rules and one `route allow in on virbr-scx` rule |
+| firewalld | Nothing when the `libvirt` zone exists, otherwise a zone named `scx-desktops` that holds only the bridge |
+| iptables, including Docker's forward policy | The same five rules, with comments |
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `STELLARCORTEX_DESKTOP_FW_INPUT_TABLE` | `filter` | Existing `inet` table holding the input chain |
-| `STELLARCORTEX_DESKTOP_FW_INPUT_CHAIN` | `input` | Input chain for the DHCP/DNS rules |
-| `STELLARCORTEX_DESKTOP_FW_FORWARD_TABLE` | `filter` | `inet` table holding the forward chain; forward rules are skipped if the table is absent, but an existing table must have the chain |
-| `STELLARCORTEX_DESKTOP_FW_FORWARD_CHAIN` | `forward` | Forward chain for guest outbound/reply rules |
-| `STELLARCORTEX_DESKTOP_UPLINK` | none, required | Host uplink interface, for example `eth0` or `wlan0` |
+Every rule names the bridge. Existing rules, chains, policies and SSH are not changed, and host inbound access does not widen. The guard table runs first and allows the computer only DHCP and DNS to the host and public addresses, so the forward rules name no uplink and keep working when the host changes network.
 
-```ini
-STELLARCORTEX_DESKTOP_FW_INPUT_TABLE=filter
-STELLARCORTEX_DESKTOP_FW_INPUT_CHAIN=input
-STELLARCORTEX_DESKTOP_UPLINK=eth0
+`stellarcortex-desktop-network-coexistence.service` applies the rules at every boot. It keeps running and checks every 30 seconds, so a firewall reload, restart or stop from any tool leaves the rules off for 30 seconds at most, and a firewall that loads after it gets them too. If a rule cannot be put back, the reason is in the service's journal. To put them back at once, run `sudo systemctl reload stellarcortex-desktop-network-coexistence.service`.
+
+The guard table has its own check on every host with a computer, with or without those rules. `stellarcortex-desktop-guard-check.timer` looks for the table every 10 seconds and reloads the guard if a flush took it, so a full flush by a tool other than `nftables.service` leaves the computer unguarded for 10 seconds at most. It touches nothing else, needs no firewall answer, and leaves a guard you stopped stopped. `sudo systemctl disable --now stellarcortex-desktop-guard-check.timer` turns it off, and it stays off after a reboot or an upgrade.
+
+To remove the rules, run this. They stay removed after a reboot, and the computer has no network until your firewall allows it another way:
+
+```sh
+sudo systemctl disable --now stellarcortex-desktop-network-coexistence.service
 ```
 
-On a host with an active firewall, `install-approved.sh` lists the chains and stops, changing nothing. Choose one path, then run it again with the hash and `--firewall-reviewed`:
+With a no, nothing changes and the install finishes without a computer. Chat keeps working. To add the computer later, run the install again and answer yes.
 
-- **nftables with an `inet` table:** write the env file first, and the install adds these rules.
-- **ufw, firewalld, Docker or anything else:** no env file. Allow DHCP and DNS from `virbr-scx` to the host, and forwarding from `virbr-scx` to your uplink, with your own tool. For ufw, for example: `ufw allow in on virbr-scx to any port 67 proto udp`, `ufw allow in on virbr-scx to any port 53`, and `ufw route allow in on virbr-scx out on <uplink>`.
+If a firewall arrives after the install, or the install could not see one, the build stops with "no network address" after 15 minutes without a lease. Run this on the host, then press Retry in Settings > Computer:
 
-Check the names with `nft list tables` and `nft list table inet <name>`. Before any change the script checks that every name is valid, the input chain exists, the forward chain exists when its table does, and the uplink is set. If a check fails it names the variable to fix and changes nothing.
+```sh
+sudo python3 /var/lib/stellarcortex/kit/deployment/ubuntu-desktop/network-coexistence.py --install
+```
 
-**Upgrading a host that already runs the coexistence unit:** the rules are matched by comment within the configured chains. Create the env file with the table, chain and uplink names the running rules use *before* replacing `/etc/stellarcortex/desktop-network-coexistence.py`. Otherwise `--remove` looks in the default `inet filter` table, removes nothing, leaves the old rules in place, and the next start stops at the precheck. Recommended order: write the env file, `systemctl stop stellarcortex-desktop-network-coexistence.service`, replace the script and unit, `systemctl daemon-reload`, then start the unit.
+A run of `install-approved.sh` by hand stops on such a firewall. Run it again with the hash and `--firewall-reviewed`.
 
 `stellarcortex-computer-build@.service` builds the computer: the install starts it, Settings > Computer shows its progress, and Retry there goes on from the step that stopped if first boot failed, and otherwise clears the failed try and starts again. If a built computer is off, Settings > Computer says so and offers **Start**, which runs `stellarcortex-computer-start.service`. Only this unit can install a computer. All bots use that one computer, each with its own user and screen. A bot's session is created by itself once the computer is ready, by `stellarcortex-session-provision@.service`, and a deleted bot's session is removed by `stellarcortex-session-remove@.service`. The installer writes `sessionProvisioning` and `environmentComputer` when the computer is ready. All bots share one virtual computer, and it comes back by itself after a host reboot, once the network guard is up. To keep it off after a reboot, turn off "Start after a reboot" in Settings > Computer. To start it then, run this as root: `python3 -I /opt/stellarcortex-desktop-broker/deployment/ubuntu-desktop/boot.py --now`. A plain `virsh start` skips the network guard check. `stellarcortex-session-provision@.service`, which the bundle installs and the broker starts, and the guest installer support separate non-sudo bot users on a shared environment VM, with per-user browser profile, D-Bus session and display. Preserve old VMs, accounts, files and effect journals. Do not copy browser credentials into new bot sessions. Guest autologin and no-idle-lock policies have physical/console-access implications and require deliberate administrator configuration.
 

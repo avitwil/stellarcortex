@@ -1,0 +1,10 @@
+[Unit]
+Description=Put back the StellarCortex desktop network guard after a firewall flush
+[Service]
+Type=oneshot
+# It runs every few seconds and nearly always does nothing, so only trouble reaches the journal.
+LogLevelMax=notice
+# A guard the owner stopped stays stopped.
+ExecCondition=/usr/bin/systemctl is-active --quiet stellarcortex-desktop-network-guard.service
+ExecCondition=/bin/sh -c '! nft list table inet scx_desktops'
+ExecStart=/usr/bin/systemctl reload stellarcortex-desktop-network-guard.service

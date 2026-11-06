@@ -589,6 +589,28 @@ def publish_result(p, pid):
     )
 
 
+class BuildError(RuntimeError):
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code = code
+
+
+LEASE_WAIT = 900
+
+
+def watch_lease(p, state):
+    '''With no address the install only waits. A firewall that blocks DHCP looks like that for hours.
+    The MAC is matched because a removed computer's lease stays listed for an hour.'''
+    mac = re.search(r'(?:[0-9a-f]{2}:){5}[0-9a-f]{2}', virsh('domiflist', domain(p)))
+    if mac and mac[0] in virsh('net-dhcp-leases', 'stellarcortex-desktops'):
+        return {**state, 'leased': True}
+    state = {**state, 'waitingSince': state.get('waitingSince', time.time())}
+    if time.time() - state['waitingSince'] > LEASE_WAIT:
+        virsh('destroy', domain(p))
+        raise BuildError('network', 'The computer got no network address')
+    return state
+
+
 def advance(p, statefile):
     state = json.loads(statefile.read_text()) if statefile.exists() else {'stage': 'approved'}
     stage = state['stage']
@@ -611,7 +633,12 @@ def advance(p, statefile):
     elif stage == 'installing':
         assert_identity(p)
         if virsh('domstate', domain(p)).strip() != 'shut off':
-            return state
+            if state.get('leased'):
+                return state
+            watched = watch_lease(p, state)
+            if watched != state:
+                save(statefile, watched)
+            return watched
         save(
             statefile,
             {'stage': 'applying', 'operation': 'installed-boot', 'planHash': plan_hash(p)},
@@ -646,12 +673,6 @@ def advance(p, statefile):
         raise RuntimeError('Unknown installation state')
     save(statefile, state)
     return state
-
-
-class BuildError(RuntimeError):
-    def __init__(self, code, message):
-        super().__init__(message)
-        self.code = code
 
 
 STAGES = {

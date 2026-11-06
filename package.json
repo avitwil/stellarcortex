@@ -1,6 +1,6 @@
 {
   "name": "stellarcortex",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "description": "Self-hosted AI teammates using subscriptions, API keys, or local models",
   "type": "module",

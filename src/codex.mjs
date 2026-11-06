@@ -128,7 +128,7 @@ export class Codex extends EventEmitter {
       m.error ? p.reject(new Error(m.error.message)) : p.resolve(m.result);
     });
     await this.request('initialize', {
-      clientInfo: { name: 'stellarcortex_bots', title: 'StellarCortex', version: '0.1.0' },
+      clientInfo: { name: 'stellarcortex_bots', title: 'StellarCortex', version: '0.1.1' },
       capabilities: { experimentalApi: true },
     });
     this.send({ method: 'initialized' });

@@ -377,7 +377,12 @@ def render(
     files['stellarcortex-desktop-network-guard.service'] = (
         HERE / 'network-guard.service'
     ).read_text()
+    for suffix in ['service', 'timer']:
+        files['stellarcortex-desktop-guard-check.' + suffix] = (
+            HERE / ('network-guard-check.' + suffix)
+        ).read_text()
     files['desktop-network-guard.nft'] = (HERE / 'network-guard.nft').read_text()
+    files['desktop-network-guard-reload.nft'] = (HERE / 'network-guard-reload.nft').read_text()
     files['network.xml'] = (HERE / 'network.xml').read_text()
     providers = {name: {'enabled': True} for name in ['openai-api', 'anthropic-api', 'local']}
     if runners:
@@ -529,23 +534,21 @@ install -m 644 app-desktop-order.conf /etc/systemd/system/APP_SERVICE.d/80-deskt
         + '''[ ! -e /etc/stellarcortex/desktop-broker.json ] || { echo 'Existing deployment: run upgrade-approved.sh instead.'; exit 1; }
 command -v node >/dev/null || { echo 'Install the application Node runtime first'; exit 1; }
 [ -e /dev/kvm ] || { echo 'KVM unavailable'; exit 1; }
-# A host firewall is the owner's. Never guess chain names: stop until the owner has read the steps.
+# A host firewall is the owner's: nothing changes until the owner has said yes.
 firewall=
-ruleset=
-command -v nft >/dev/null && ruleset=$(nft list ruleset)
-# Not a pipe: grep -q stops at the first match, nft then fails on the closed pipe, and pipefail hides the match.
-if grep -q 'hook' <<<"$ruleset"; then
- if [ "${2:-}" != --firewall-reviewed ]; then
-  echo 'Existing firewall detected, so nothing was changed. These chains are active:'
-  grep -E '^table|hook' <<<"$ruleset" || true
-  echo 'The computer needs DHCP, DNS and outbound traffic on virbr-scx (192.168.153.0/24).'
-  echo '1. Read "Firewall coexistence" in deployment/ubuntu-desktop/README.md.'
-  echo '2. For an nftables inet firewall, write /etc/stellarcortex/desktop-network-coexistence.env, and this install adds the rules.'
-  echo '   For ufw, firewalld, Docker or anything else, allow that traffic with your own tool.'
-  echo '3. Run this script again with --firewall-reviewed after the hash.'
-  exit 1
- fi
+if [ "${2:-}" = --firewall-reviewed ]; then
  firewall=reviewed
+elif command -v nft >/dev/null; then
+ code=0
+ found=$(python3 -I -B network-coexistence.py --check) || code=$?
+ if [ "$code" = 10 ]; then
+  echo "Existing firewall detected ($found), so nothing was changed."
+  echo 'The computer needs DHCP, DNS and outbound traffic on virbr-scx (192.168.153.0/24).'
+  echo 'To add rules for that bridge only, run this script again with --firewall-reviewed after the hash.'
+  exit 1
+ elif [ "$code" != 0 ]; then
+  exit 6
+ fi
 fi
 apt-get update
 apt-get install -y PACKAGES
@@ -561,10 +564,10 @@ chmod -R go-w /opt/stellarcortex-desktop-broker
 '''
         + pins
         + '''install -m 644 desktop-isolation.json /etc/stellarcortex/
-install -m 644 desktop-network-guard.nft /etc/stellarcortex/
-install -m 644 ./*.service /etc/systemd/system/
+install -m 644 desktop-network-guard.nft desktop-network-guard-reload.nft /etc/stellarcortex/
+install -m 644 ./*.service ./*.timer /etc/systemd/system/
 coexistence=
-if [ -n "$firewall" ] && [ -e /etc/stellarcortex/desktop-network-coexistence.env ]; then
+if [ -n "$firewall" ]; then
  coexistence=yes
  install -m 644 network-coexistence.py /etc/stellarcortex/desktop-network-coexistence.py
  install -m 644 network-coexistence.unit /etc/systemd/system/stellarcortex-desktop-network-coexistence.service
@@ -584,11 +587,15 @@ fi
 [[ "$(virsh --connect qemu:///system net-info stellarcortex-desktops)" =~ Active:[[:space:]]+yes ]] || virsh --connect qemu:///system net-start stellarcortex-desktops
 if [ -n "$coexistence" ]; then
  systemctl enable stellarcortex-desktop-network-coexistence.service
- systemctl start stellarcortex-desktop-network-coexistence.service
-elif [ -n "$firewall" ]; then
- echo 'Your firewall was left as it is. Allow DHCP, DNS and outbound traffic on virbr-scx before the first computer installs.'
+ systemctl start stellarcortex-desktop-network-coexistence.service || {
+  echo 'The firewall rules for the computer could not be added, so the computer is not ready. Chat still works.'
+  echo 'See why: systemctl status stellarcortex-desktop-network-coexistence.service. Then run the install again.'
+  exit 6
+ }
 fi
 systemctl enable libvirtd.service stellarcortex-desktop-network-guard.service stellarcortex-desktop-boot.service stellarcortex-desktop-broker.service
+systemctl enable stellarcortex-desktop-guard-check.timer
+systemctl start stellarcortex-desktop-guard-check.timer
 # Written last. desktop-broker.json marks a finished install, so a run that stopped earlier can run again.
 install -m 644 desktop-provider.json /etc/stellarcortex/
 install -m 600 desktop-broker.json /etc/stellarcortex/
@@ -636,13 +643,24 @@ python3 -I -B "$next/deployment/ubuntu-desktop/host-setup.py" merge-config . /et
         + pins
         + '''systemctl stop stellarcortex-desktop-broker.service
 rm -rf "$live"; mv "$next" "$live"
-install -m 644 ./*.service /etc/systemd/system/
-[ ! -e /etc/systemd/system/stellarcortex-desktop-network-coexistence.service ] || install -m 644 broker-coexistence.unit /etc/systemd/system/stellarcortex-desktop-broker.service
+# Only a host without the check gets it switched on, so an owner's disable outlives an upgrade.
+guard_check=
+[ -e /etc/systemd/system/stellarcortex-desktop-guard-check.timer ] || guard_check=new
+install -m 644 ./*.service ./*.timer /etc/systemd/system/
+install -m 644 desktop-network-guard-reload.nft /etc/stellarcortex/
+if [ -e /etc/systemd/system/stellarcortex-desktop-network-coexistence.service ]; then
+ install -m 644 broker-coexistence.unit /etc/systemd/system/stellarcortex-desktop-broker.service
+ install -m 644 network-coexistence.py /etc/stellarcortex/desktop-network-coexistence.py
+ install -m 644 network-coexistence.unit /etc/systemd/system/stellarcortex-desktop-network-coexistence.service
+fi
 '''
         + order
         + '''systemctl daemon-reload
 systemctl enable libvirtd.service stellarcortex-desktop-network-guard.service stellarcortex-desktop-boot.service stellarcortex-desktop-broker.service
 systemctl start stellarcortex-desktop-broker.service
+# A firewall problem is no reason to undo the update.
+[ -z "$guard_check" ] || { systemctl enable stellarcortex-desktop-guard-check.timer && systemctl start stellarcortex-desktop-guard-check.timer; } || echo 'The network guard check did not start. See: systemctl status stellarcortex-desktop-guard-check.timer'
+systemctl try-restart stellarcortex-desktop-network-coexistence.service || echo 'The firewall rules for the computer did not start. See: systemctl status stellarcortex-desktop-network-coexistence.service'
 trap - ERR
 cmp -s desktop-network-guard.nft /etc/stellarcortex/desktop-network-guard.nft || printf 'The network guard in this bundle differs from the one in use. It was left as it is; review it before replacing it.\\n'
 printf 'Upgraded. Backup: %s\\n' "$backup"

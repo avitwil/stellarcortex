@@ -1,6 +1,6 @@
 [Unit]
 Description=StellarCortex registered desktop lifecycle and console broker
-Requires=libvirtd.service stellarcortex-desktop-network-guard.service stellarcortex-desktop-network-coexistence.service
+Requires=libvirtd.service stellarcortex-desktop-network-guard.service
 After=libvirtd.service stellarcortex-desktop-network-guard.service stellarcortex-desktop-network-coexistence.service
 [Service]
 Type=simple

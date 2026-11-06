@@ -55,6 +55,10 @@ export function computerFailureText(code, tr) {
         'וירטואליזציה (KVM) לא זמינה במארח. הפעילו אותה ב־BIOS ונסו שוב.',
         'Virtualization (KVM) is not available on the host. Turn it on in the BIOS and try again.',
       ),
+      network: tr(
+        'המחשב לא קיבל כתובת רשת, בדרך כלל כי חומת האש במארח חוסמת אותו. השיחה עובדת. הריצו במארח: sudo python3 /var/lib/stellarcortex/kit/deployment/ubuntu-desktop/network-coexistence.py --install, ואז לחצו על נסו שוב.',
+        'The computer got no network address, usually because the host firewall blocks it. Chat works. On the host run: sudo python3 /var/lib/stellarcortex/kit/deployment/ubuntu-desktop/network-coexistence.py --install, then press Retry.',
+      ),
       download: tr(
         'הורדת אובונטו נכשלה. בדקו את החיבור לאינטרנט ונסו שוב. ההורדה תמשיך מאותה נקודה.',
         'Downloading Ubuntu failed. Check the internet connection and try again. The download goes on from where it stopped.',
@@ -124,8 +128,12 @@ export function computerInstallText(code, tr) {
         'Node.js and npm are not installed system-wide. Install them that way, then run the install again.',
       ),
       firewall: tr(
-        'לא אישרתם גישה דרך חומת האש, ולכן שום דבר לא השתנה. כדי להוסיף מחשב, הריצו שוב את ההתקנה.',
-        'You did not allow access through the firewall, so nothing changed. To add a computer, run the install again.',
+        'לא אישרתם גישה דרך חומת האש, ולכן שום דבר לא השתנה. כדי להוסיף מחשב, הריצו שוב את ההתקנה וענו כן.',
+        'You did not allow access through the firewall, so nothing changed. To add a computer, run the install again and answer yes.',
+      ),
+      'firewall-unknown': tr(
+        'לא הצלחנו לקרוא או לשנות את חומת האש, ולכן המחשב לא מוכן. השיחה עובדת. פלט ההתקנה מסביר למה. תקנו את זה והריצו שוב את ההתקנה.',
+        'The firewall could not be read or changed, so the computer is not ready. Chat works. The install output says why. Fix that, then run the install again.',
       ),
     }[code] ||
     tr(
