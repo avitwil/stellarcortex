@@ -6,7 +6,7 @@
 
 **סביבת עבודה של עמיתי AI בקוד פתוח, בהתקנה עצמאית על Linux, בהשראת Grok Bot.**
 
-גרסה **0.1.1** · [רישיון MIT](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · אתר: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
+גרסה **0.1.2** · [רישיון MIT](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · אתר: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
 
 יוצרים בוטים לפי הצורך, משוחחים איתם, נותנים להם לחלק עבודה ביניהם ועוקבים אחרי השיחות והתוצאות. לכל בוט אפשר לבחור ספק ומודל משלו: חשבון אצל ספק, מפתח API, או שרת מודל מקומי שכבר רץ אצלכם.
 
@@ -230,6 +230,13 @@ curl -fsSL https://stellarcortex.avitwil.io/install.sh | bash
 
 התחברו לספקים בשרת, באותו משתמש. פרטים ב[חשבונות ומודלים](#models).
 
+**כבר התקנתם בלי Tailscale?** בצעו את שלבים 4 ו־5, ואז הריצו את זה בשרת. הפקודה מפעילה מחדש את השירות, ולכן משימות שרצות נעצרות, ומדפיסה את הפקודה של שלב 7 ואת הקישור של שלב 8.
+
+```bash
+cd ~/stellarcortex
+STELLARCORTEX_TAILNET_UI_URL=https://your-machine.your-tailnet.ts.net/ bash install.sh --service
+```
+
 **בלי Tailscale.** דלגו על שלבים 4, 5 ו־7, התקינו בפקודה הרגילה, ופתחו מנהרת SSH מהמחשב שלכם. אחר כך גלשו אל http://127.0.0.1:4317 והזינו את [מפתח הגישה](#first-run).
 
 ```bash
@@ -261,15 +268,28 @@ ssh -N -L 4317:127.0.0.1:4317 stellar@your-server-ip
 
 4. פתחו את הקישור שמודפס ממכשיר אחר. בלי `STELLARCORTEX_PUBLIC_URL` השרת עונה "Host is not configured".
 
+<a id="start-stop"></a>
+### הפעלה וכיבוי
+
+ההתקנה מוסיפה בלינוקס את הפקודה `stcortex`.
+
+| פקודה | מה היא עושה |
+| --- | --- |
+| `stcortex --start` | מפעילה עכשיו, יחד עם המחשב הווירטואלי. לא משנה מה קורה באתחול. |
+| `stcortex --stop` | עוצרת עכשיו ומכבה את המחשב הווירטואלי בצורה מסודרת. הבוטים והנתונים נשמרים. אם מוגדרת הפעלה באתחול, היא עדיין תתבצע. |
+| `stcortex --enable` | מפעילה עכשיו, יחד עם המחשב הווירטואלי, ומגדירה את שניהם להפעלה באתחול, בלי צורך בכניסה למשתמש. |
+| `stcortex --disable` | עוצרת את שניהם עכשיו ומבטלת את ההפעלה שלהם באתחול. |
+
+`--enable` ו־`--disable` קובעות את המתג **הפעלה אחרי אתחול** ב**הגדרות ← מחשב**, כך שההגדרות מציגות את התוצאה. `--start` ו־`--stop` לא משנות אותו.
+
 <a id="change-settings"></a>
 ### שינוי ההגדרות האלה בהמשך
 
-הריצו שוב את ההתקנה עם ההגדרה החדשה, ואז הפעילו מחדש את השירות, כי שירות שרץ שומר על ההגדרות הישנות. הגדרות שלא חזרתם עליהן נשארות כמו שהיו. הן נשמרות ב־`~/.config/systemd/user/stellarcortex.service.d/install.conf`.
+הריצו שוב את ההתקנה עם ההגדרה החדשה. היא מפעילה מחדש את השירות, ולכן משימות שרצות נעצרות, וזה לוקח דקה או שתיים. הגדרות שלא חזרתם עליהן נשארות כמו שהיו. הן נשמרות ב־`~/.config/systemd/user/stellarcortex.service.d/install.conf`.
 
 ```bash
 cd ~/stellarcortex
 STELLARCORTEX_TAILNET_UI_URL=https://your-machine.your-tailnet.ts.net/ bash install.sh --service
-systemctl --user restart stellarcortex
 ```
 
 על תיקיית הנתונים והפורט קראו ב[מדריך הפריסה](docs/DEPLOYMENT.md#linux-service).
@@ -419,6 +439,8 @@ npm run format      # applies the formatting
 [MIT](LICENSE). התוכנה מסופקת "כפי שהיא" (as is), ללא אחריות מכל סוג. ‏StellarCortex הוא פרויקט עצמאי ואינו קשור ל־xAI,‏ ל־OpenAI,‏ ל־Anthropic או לכל ספק אחר, ואינו מאושר על ידם. קבצים כלולים, תלויות ותוכנות שמורדות שומרים על הרישיונות והתנאים שלהם: ראו [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). חלקם אינם קוד פתוח, והם מותקנים מהמקור שלהם במחשב שלכם. לפני חיבור שירות בדקו את [תנאי הספקים](#provider-terms).
 
 ## היסטוריית גרסאות
+
+**0.1.2** — הפקודה החדשה `stcortex` מפעילה ועוצרת את הכלי ואת המחשב הווירטואלי שלו, וקובעת מה קורה באתחול. אפשר להוסיף Tailscale אחרי ההתקנה בפקודה אחת. פלט ההתקנה ברור יותר: הוא אומר מתי החתימה אומתה, apt שקט אלא אם משהו נכשל, והשאלה על חומת האש בולטת.
 
 **0.1.1** — המחשב הווירטואלי עובד עכשיו גם במארח עם חומת אש. ההתקנה מזהה nftables,‏ ufw,‏ firewalld או iptables, שואלת פעם אחת ומוסיפה כללים לגשר שלה בלבד. מחשב שלא מקבל רשת נעצר עם הודעה ברורה ודרך התיקון. בדיקה קטנה מחזירה את הגנת הרשת אם טעינה מחדש של חומת האש מסירה אותה.
 

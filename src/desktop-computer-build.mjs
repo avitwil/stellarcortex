@@ -78,6 +78,19 @@ export class ComputerBuild {
     child.once('exit', code => done(code === 0));
     return this.status();
   }
+  // The clean shutdown the guest gets from its power button. status() says stopped once it is off.
+  stop() {
+    const state = this.status(),
+      uuid = this.computer()?.uuid;
+    if (state.state !== 'ready') return state;
+    // An old record names no computer, so nothing would ever report it off.
+    if (!uuid) return { state: 'unknown' };
+    this.run('/usr/bin/virsh', ['--connect', 'qemu:///system', 'shutdown', uuid], {
+      stdio: 'ignore',
+      env: ENV,
+    }).once('error', () => {});
+    return state;
+  }
   retry() {
     const state = this.status();
     if (state.state === 'stopped') return this.start();

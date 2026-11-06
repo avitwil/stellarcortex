@@ -699,7 +699,7 @@ export class McpConnections extends EventEmitter {
     let timer;
     try {
       const client = (session.client = new Client(
-        { name: 'stellarcortex', version: '0.1.1' },
+        { name: 'stellarcortex', version: '0.1.2' },
         {
           capabilities: {},
           versionNegotiation: {

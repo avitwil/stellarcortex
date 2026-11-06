@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { sudoGuard } from './helpers/no-sudo.mjs';
 import {
   LATEST_URL,
   compareVersions,
@@ -520,7 +521,7 @@ function bootstrap(
     timeout: 60000,
     env: {
       ...process.env,
-      PATH: bin + path.delimiter + process.env.PATH,
+      ...sudoGuard(bin),
       HOME: home,
       SITE: site,
       STELLARCORTEX_BIND: '192.0.2.7',
@@ -567,6 +568,19 @@ test('the one-line install fails clearly on another platform, and when it has no
   assert.match(text, /'run this as your regular user/);
 });
 
+test('the install says the signature was verified, and only after every check', t => {
+  const good = bootstrap(t);
+  assert.equal(good.run.status, 0, good.run.stderr);
+  assert.match(good.run.stdout, /Signature verified: this is the signed StellarCortex \S+\./);
+  for (const refused of [{ minimum: '0.3.0' }, { tamperArchive: true }]) {
+    const { run } = bootstrap(t, refused);
+    assert.notEqual(run.status, 0);
+    assert.doesNotMatch(run.stdout, /Signature verified/);
+  }
+  const text = fs.readFileSync(new URL('../scripts/site-install.sh', import.meta.url), 'utf8');
+  assert.ok(text.indexOf('Signature verified') > text.indexOf('createHash("sha256")'));
+  assert.ok(text.indexOf('Signature verified') < text.indexOf('tar -xzf'));
+});
 test('the install refuses a release older than its floor, and the release tool sets that floor', t => {
   const { run, ran } = bootstrap(t, { minimum: '0.3.0' });
   assert.notEqual(run.status, 0);

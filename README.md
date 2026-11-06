@@ -6,7 +6,7 @@
 
 **A self-hosted, open-source workspace of AI teammates for Linux, inspired by Grok Bot.**
 
-Version **0.1.1** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
+Version **0.1.2** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
 
 Create bots when you need them, talk to them, let them delegate work to each other, and follow their conversations and results. Each bot can use its own provider and model: a provider account, an API key, or a local model server you already run.
 
@@ -230,6 +230,13 @@ The app stays on `127.0.0.1` and on a private socket, so no port is opened for i
 
 Sign in to providers on the server, as this user. See [Accounts and models](#models).
 
+**Already installed without Tailscale?** Do steps 4 and 5, then run this on the server. It restarts the service, which stops running tasks, and prints the command for step 7 and the link for step 8.
+
+```bash
+cd ~/stellarcortex
+STELLARCORTEX_TAILNET_UI_URL=https://your-machine.your-tailnet.ts.net/ bash install.sh --service
+```
+
 **Without Tailscale.** Skip steps 4, 5 and 7, install with the plain command, and open an SSH tunnel from your computer. Then browse to http://127.0.0.1:4317 and enter the [access key](#first-run).
 
 ```bash
@@ -261,15 +268,28 @@ Use this to reach the app from other devices at home or in a small office. It is
 
 4. Open the printed link from another device. Without `STELLARCORTEX_PUBLIC_URL`, the server answers "Host is not configured".
 
+<a id="start-stop"></a>
+### Start and stop it
+
+The install adds the `stcortex` command on Linux.
+
+| Command | What it does |
+| --- | --- |
+| `stcortex --start` | Starts it now, with the virtual computer. It does not change what happens at boot. |
+| `stcortex --stop` | Stops it now and shuts the virtual computer down cleanly. Bots and data are kept. If it is set to start at boot, it still does. |
+| `stcortex --enable` | Starts it now, with the virtual computer, and sets both to start at boot, with no login needed. |
+| `stcortex --disable` | Stops both now and cancels their start at boot. |
+
+`--enable` and `--disable` set the **Start after a reboot** switch in **Settings → Computer**, so Settings shows the result. `--start` and `--stop` do not change it.
+
 <a id="change-settings"></a>
 ### Change these settings later
 
-Run the install again with the new setting, then restart the service, because a running service keeps its old settings. Settings you do not repeat stay as they were. They are kept in `~/.config/systemd/user/stellarcortex.service.d/install.conf`.
+Run the install again with the new setting. It restarts the service, which stops running tasks, and takes a minute or two. Settings you do not repeat stay as they were. They are kept in `~/.config/systemd/user/stellarcortex.service.d/install.conf`.
 
 ```bash
 cd ~/stellarcortex
 STELLARCORTEX_TAILNET_UI_URL=https://your-machine.your-tailnet.ts.net/ bash install.sh --service
-systemctl --user restart stellarcortex
 ```
 
 See the [deployment guide](docs/DEPLOYMENT.md#linux-service) for the data folder and port.
@@ -419,6 +439,8 @@ Some tests need Linux. See [Testing and validation](docs/VALIDATION.md). To publ
 [MIT](LICENSE). The software is provided "as is", without warranty of any kind. StellarCortex is an independent project and is not affiliated with or endorsed by xAI, OpenAI, Anthropic or any other provider. Bundled files, dependencies and downloaded software keep their own licenses and terms: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Some are not open source, and they stay installed from their own source on your machine. Check [Provider terms](#provider-terms) before you connect a service.
 
 ## Version history
+
+**0.1.2** — the new `stcortex` command starts and stops the tool and its virtual computer, and sets what happens at boot. Tailscale can be added after an install with one command. The install output is clearer: it says when the signature is verified, apt stays quiet unless it fails, and the firewall question stands out.
 
 **0.1.1** — the virtual computer now works on hosts with a firewall. The install finds nftables, ufw, firewalld or iptables, asks once and adds rules for its own bridge only. A computer that gets no network stops with a clear message and the fix. A small check restores the network guard if a firewall reload removes it.
 

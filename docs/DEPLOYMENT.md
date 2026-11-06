@@ -47,11 +47,10 @@ Open http://127.0.0.1:4317 locally. Obtain the installation access key securely 
 The server can also listen on a private Unix socket for a reverse proxy on the same host, such as Tailscale Serve:
 
 ```bash
-STELLARCORTEX_UI_SOCKET="$HOME/.stellarcortex/tailscale-ui.sock"
 STELLARCORTEX_TAILNET_UI_URL=https://your-machine.your-tailnet.ts.net/
 ```
 
-With `bash install.sh --service`, set only the URL; see [Linux service](#linux-service). Then run `sudo tailscale serve --bg --https=443 unix:/your/data/tailscale-ui.sock`, with your data directory. If you move the data directory, run it again with the new socket, because the old one gives a 502. `STELLARCORTEX_UI_SOCKET` must be exactly `tailscale-ui.sock` inside the active data directory; the server creates it with mode 0600. `STELLARCORTEX_TAILNET_UI_URL` must be the exact HTTPS origin the proxy serves (no path, query or credentials). Only requests that arrive on that socket with matching `X-Forwarded-Host` and `X-Forwarded-Proto: https` are treated as coming from that origin, and the access key and session cookie are still required. Point the proxy at the socket following the [Tailscale Serve documentation](https://tailscale.com/kb/1312/serve). The TCP listener on `127.0.0.1` keeps working.
+The socket is `tailscale-ui.sock` in the data folder. On a service, see [Linux service](#linux-service). Then run `sudo tailscale serve --bg --https=443 unix:/your/data/tailscale-ui.sock`, with your data directory. If you move the data directory, run it again with the new socket, because the old one gives a 502. `STELLARCORTEX_UI_SOCKET` must be exactly `tailscale-ui.sock` inside the active data directory; the server creates it with mode 0600. `STELLARCORTEX_TAILNET_UI_URL` must be the exact HTTPS origin the proxy serves (no path, query or credentials). Only requests that arrive on that socket with matching `X-Forwarded-Host` and `X-Forwarded-Proto: https` are treated as coming from that origin, and the access key and session cookie are still required. Point the proxy at the socket following the [Tailscale Serve documentation](https://tailscale.com/kb/1312/serve). The TCP listener on `127.0.0.1` keeps working.
 
 ## HTTPS reverse proxy
 

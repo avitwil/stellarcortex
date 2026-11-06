@@ -73,6 +73,11 @@ export function createDesktopBrokerServer({
           throw Error('Only Retry can be asked for here');
         return json(res, 200, broker.computerBuild(input.retry === true));
       }
+      if (req.url === '/computer-stop') {
+        if (!broker.computerStop) throw Error('Computer setup is not configured');
+        if (Object.keys(input).length) throw Error('Stopping takes no settings');
+        return json(res, 200, broker.computerStop());
+      }
       if (req.url === '/kit-update') {
         if (!broker.kitUpdate) throw Error('Root updates are not installed');
         if (Object.keys(input).some(key => key !== 'version'))

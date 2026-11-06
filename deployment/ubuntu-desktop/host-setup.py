@@ -550,8 +550,12 @@ elif command -v nft >/dev/null; then
   exit 6
  fi
 fi
-apt-get update
-apt-get install -y PACKAGES
+# Apt's output only matters when it fails. Nobody would see a question, so apt asks none,
+# and it keeps the owner's edited config files, such as a firewall's.
+quiet(){ local log code=0; log=$(mktemp); "$@" </dev/null >"$log" 2>&1 || code=$?; [ "$code" = 0 ] || cat "$log" >&2; rm -f "$log"; return "$code"; }
+echo 'Installing the packages the computer needs. This takes a few minutes.'
+quiet apt-get update
+quiet env DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold PACKAGES
 install -d -m 755 /opt/stellarcortex-desktop-broker /etc/stellarcortex /run/stellarcortex-desktops
 install -d -m 711 /var/lib/stellarcortex/desktops
 install -d -m 700 /var/lib/stellarcortex/desktops/provisioning MEDIA
@@ -643,6 +647,7 @@ python3 -I -B "$next/deployment/ubuntu-desktop/host-setup.py" merge-config . /et
         + pins
         + '''systemctl stop stellarcortex-desktop-broker.service
 rm -rf "$live"; mv "$next" "$live"
+install -m 755 "$live/scripts/stcortex" /usr/local/bin/stcortex
 # Only a host without the check gets it switched on, so an owner's disable outlives an upgrade.
 guard_check=
 [ -e /etc/systemd/system/stellarcortex-desktop-guard-check.timer ] || guard_check=new

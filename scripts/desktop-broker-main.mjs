@@ -64,6 +64,7 @@ const broker = new LibvirtDesktopBroker({
 });
 const build = new ComputerBuild({ computer: () => reload().sessionProvisioning?.computer });
 broker.computerBuild = retry => (retry ? build.retry() : build.status());
+broker.computerStop = () => build.stop();
 const kit = new KitUpdate();
 broker.kitUpdate = version => (version === undefined ? kit.status() : kit.start(version));
 broker.bootPolicy = bootPolicy(path.join(state, 'boot-policy.json'), () => reload().bootApproved);

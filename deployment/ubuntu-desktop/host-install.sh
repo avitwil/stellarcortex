@@ -16,14 +16,15 @@ rm -rf "$kit"; install -d -m 700 "$kit"
 tar -C "$app" -cf - src scripts deployment package.json package-lock.json update-keys.json | tar -C "$kit" --no-same-owner -xf -
 chown -R root:root "$kit"; chmod -R go-w "$kit"
 flag=
-command -v nft >/dev/null || { apt-get update >/dev/null; apt-get install -y nftables >/dev/null; }
+command -v nft >/dev/null || { apt-get update >/dev/null; apt-get install -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold nftables </dev/null >/dev/null; }
 found=
 code=0
 found=$(python3 -I -B "$kit/deployment/ubuntu-desktop/network-coexistence.py" --check) || code=$?
 if [ "$code" = 10 ]; then
+ printf '\n\n%s\n' '========== YOUR ANSWER IS NEEDED =========='
  echo "This host has a firewall ($found). The virtual computer needs DHCP, DNS and outbound traffic through it."
  echo 'The install can add rules for its bridge, virbr-scx, and nothing else: your rules, SSH and inbound access stay as they are.'
- read -r -p 'Add them? [y/N] ' answer </dev/tty || answer=
+ read -r -p '>>> Add them? [y/N] ' answer </dev/tty || answer=
  [[ "$answer" =~ ^[Yy] ]] || exit 3
  flag=--firewall-reviewed
 elif [ "$code" != 0 ]; then

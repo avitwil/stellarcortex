@@ -333,6 +333,40 @@ test('every way through the install gets the browser libraries, and a failure na
     'the path with a computer',
   );
 });
+test('stop shuts down only a computer that runs, and the route takes no settings', async t => {
+  const {
+    build: computer,
+    file,
+    calls,
+  } = build(
+    t,
+    { stage: 'ready' },
+    {
+      computer: () => ({ uuid: 'u-1' }),
+      domainState: () => 'running',
+    },
+  );
+  assert.equal(computer.stop().state, 'ready');
+  assert.deepEqual(calls, [['/usr/bin/virsh', '--connect', 'qemu:///system', 'shutdown', 'u-1']]);
+  fs.writeFileSync(file, JSON.stringify({ stage: 'install', bootId: 'boot', pid: 1 }));
+  assert.equal(computer.stop().state, 'building');
+  assert.equal(calls.length, 1, 'a build is left to finish');
+  const old = build(t, { stage: 'ready' });
+  assert.equal(old.build.stop().state, 'unknown', 'an old record cannot report itself off');
+  assert.deepEqual(old.calls, []);
+  const server = createDesktopBrokerServer({
+    broker: { computerStop: () => ({ state: 'ready' }) },
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => server.close());
+  const post = body =>
+    fetch(`http://127.0.0.1:${server.address().port}/computer-stop`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  assert.equal((await post({})).status, 200);
+  assert.equal((await post({ force: true })).status, 400);
+});
 test('the firewall question comes from the real check, and the answer decides', t => {
   const text = fs.readFileSync(
       new URL('../deployment/ubuntu-desktop/host-install.sh', import.meta.url),
@@ -358,6 +392,8 @@ test('the firewall question comes from the real check, and the answer decides', 
   stub('python3', 'test -x nft || exit 1; echo nftables table own; exit 10');
   assert.equal(run().status, 3, 'nft arrives first, and no answer is a no');
   assert.match(run().stdout, /firewall \(nftables table own\).*\n.*virbr-scx, and nothing else/);
+  assert.match(run().stdout, /\n\n=+ YOUR ANSWER IS NEEDED =+\nThis host has a firewall/);
+  assert.match(check, /read -r -p '>>> Add them\? \[y\/N\] '/);
   assert.equal(run('n\n').status, 3);
   assert.match(run('y\n').stdout, /flag=--firewall-reviewed/);
   stub('python3', 'exit 0');

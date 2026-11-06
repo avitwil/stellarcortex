@@ -18,9 +18,11 @@ main(){
  command -v curl >/dev/null && command -v tar >/dev/null || die 'curl and tar are required. Install them, then run this again.'
  [[ ! -e "$dir/package.json" ]] || die "$dir already holds an install. Update it from Settings, or set STELLARCORTEX_INSTALL_DIR."
  node_ready(){ command -v node >/dev/null && command -v npm >/dev/null && node -e 'const [a,b]=process.versions.node.split(".").map(Number);if(a<22||(a===22&&b<16))process.exit(1)'; }
+ # Apt's output only matters when it fails.
+ quiet(){ local log code=0; log=$(mktemp); "$@" </dev/null >"$log" 2>&1 || code=$?; [ "$code" = 0 ] || cat "$log" >&2; rm -f "$log"; return "$code"; }
  if ! node_ready && command -v apt-get >/dev/null; then
   echo 'Installing Node.js and npm. This needs root.'
-  { sudo apt-get update && sudo apt-get install -y nodejs npm; } </dev/null || true
+  { quiet sudo apt-get update && quiet sudo apt-get install -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold nodejs npm; } </dev/null || true
  fi
  node_ready || die 'Node.js 22.16+ and npm are required. Install them for the whole system from https://nodejs.org, then run this again.'
  tmp=$(mktemp -d)
@@ -53,6 +55,7 @@ console.log([entry.version,entry.file,entry.sha256].join(" "));'
  echo "Downloading StellarCortex $version."
  "${get[@]}" -o "$tmp/$file" "$base/$file" || die 'could not download the release.'
  node -e 'const [file,sha]=process.argv.slice(1);if(require("crypto").createHash("sha256").update(require("fs").readFileSync(file)).digest("hex")!==sha)process.exit(1)' "$tmp/$file" "$sha" || die 'the release file does not match its signed hash, so it was refused.'
+ echo "Signature verified: this is the signed StellarCortex $version."
  staged=$dir.new.$$
  mkdir -p "$staged"
  tar -xzf "$tmp/$file" -C "$staged" --strip-components=1 --no-same-owner

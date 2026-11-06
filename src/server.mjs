@@ -50,6 +50,10 @@ import { ClaudeLogin, claudeLoginCommand } from './claude-login.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+// A tailnet address alone is enough: the socket has one possible place, in the data folder.
+export const defaultUiSocket = (env, dataDir) =>
+  env.STELLARCORTEX_UI_SOCKET ||
+  (env.STELLARCORTEX_TAILNET_UI_URL ? path.join(path.resolve(dataDir), 'tailscale-ui.sock') : null);
 export const defaultData = () => {
   if (process.env.STELLARCORTEX_DATA_DIR) return process.env.STELLARCORTEX_DATA_DIR;
   const local = path.join(ROOT, 'stellarcortex.local.json');
@@ -94,7 +98,7 @@ export async function createApp({
   dataDir = defaultData(),
   port = Number(process.env.PORT || 4317),
   host = process.env.STELLARCORTEX_BIND || '127.0.0.1',
-  uiSocket = process.env.STELLARCORTEX_UI_SOCKET || null,
+  uiSocket = defaultUiSocket(process.env, dataDir),
   trustedUiOrigin = process.env.STELLARCORTEX_TAILNET_UI_URL || null,
   runtime,
   claudeRuntime = new Claude(),
@@ -436,7 +440,8 @@ export async function createApp({
     );
     try {
       const actualPort = server.address()?.port || port;
-      let requestHost = req.headers.host;
+      let requestHost = req.headers.host,
+        overTailnet = false;
       const hosts = new Set([
         `127.0.0.1:${actualPort}`,
         `localhost:${actualPort}`,
@@ -462,8 +467,10 @@ export async function createApp({
           requestHost === 'localhost' &&
           req.headers['x-forwarded-host'] === u.host &&
           req.headers['x-forwarded-proto'] === 'https'
-        )
+        ) {
           requestHost = u.host;
+          overTailnet = true;
+        }
       }
       if (!hosts.has(requestHost))
         return json(res, 403, {
@@ -517,7 +524,7 @@ export async function createApp({
         sessions.set(token, Date.now() + 7 * 86400000);
         res.setHeader(
           'Set-Cookie',
-          `stellarcortex_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${process.env.STELLARCORTEX_PUBLIC_URL?.startsWith('https:') ? '; Secure' : ''}`,
+          `stellarcortex_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${process.env.STELLARCORTEX_PUBLIC_URL?.startsWith('https:') || overTailnet ? '; Secure' : ''}`,
         );
         return json(res, 200, { ok: true });
       }

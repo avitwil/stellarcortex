@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { installedSettings } from './linux-service.mjs';
+import { installedSettings, tailnetName, tailnetSteps } from './linux-service.mjs';
 const {
     data,
     port,
@@ -38,6 +38,7 @@ else {
     );
   else if (!publicUrl)
     console.log(
-      `\nOn a remote server, first run this on your own computer: ssh -N -L ${port}:127.0.0.1:${port} ${os.userInfo().username}@this-server`,
+      `\nOn a remote server, first run this on your own computer: ssh -N -L ${port}:127.0.0.1:${port} ${os.userInfo().username}@this-server\n${tailnetSteps(tailnetName())}`,
     );
 }
+console.log('\nTurn it on and off with: stcortex --start, --stop, --enable or --disable.');

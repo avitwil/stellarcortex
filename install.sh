@@ -10,9 +10,11 @@ if [[ "${1:-}" == '--desktop-host-bundle' ]]; then
   exec python3 -B deployment/ubuntu-desktop/host-setup.py --source "$PWD" "$@"
 fi
 node_ready(){ command -v node >/dev/null && command -v npm >/dev/null && node -e 'const [a,b]=process.versions.node.split(".").map(Number);if(a<22||(a===22&&b<16))process.exit(1)'; }
+# Apt's output only matters when it fails.
+quiet(){ local log code=0; log=$(mktemp); "$@" </dev/null >"$log" 2>&1 || code=$?; [ "$code" = 0 ] || cat "$log" >&2; rm -f "$log"; return "$code"; }
 if ! node_ready && command -v apt-get >/dev/null; then
   echo 'Installing Node.js and npm. This needs root.'
-  sudo apt-get update && sudo apt-get install -y nodejs npm || true
+  quiet sudo apt-get update && quiet sudo apt-get install -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold nodejs npm || true
 fi
 node_ready || { echo 'Node.js 22.16+ and npm are required. Install them from https://nodejs.org, then run this again.'; exit 1; }
 codex_ready(){ node node_modules/@openai/codex/bin/codex.js --version >/dev/null 2>&1; }
@@ -30,6 +32,12 @@ if [[ "${1:-}" == '--service' ]]; then
   systemctl --user enable stellarcortex.service
   # Restart, not start: a later run may have changed the settings.
   systemctl --user restart stellarcortex.service
+  # /usr/local/bin is on every shell's PATH. Without root, the user's own folder is the best left.
+  echo 'Adding the stcortex command. This needs root.'
+  if ! sudo install -m 755 scripts/stcortex /usr/local/bin/stcortex; then
+    install -D -m 755 scripts/stcortex "$HOME/.local/bin/stcortex"
+    echo 'stcortex is in ~/.local/bin. If a new shell does not find it, add that folder to your PATH.'
+  fi
   node scripts/install-computer.mjs
   node scripts/first-link.mjs
 fi

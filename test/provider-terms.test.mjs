@@ -69,10 +69,10 @@ test('the ways to run name what the install really reads', () => {
       'install.sh | STELLARCORTEX_TAILNET_UI_URL=https://your-machine.your-tailnet.ts.net/ bash',
       'install.sh | STELLARCORTEX_BIND=192.168.1.50 STELLARCORTEX_PUBLIC_URL=http://192.168.1.50:4317 bash',
       'sudo tailscale serve --bg --https=443 unix:/home/stellar/.stellarcortex/tailscale-ui.sock',
-      'systemctl --user restart stellarcortex',
     ])
       assert.ok(text.includes(value), file + ': ' + value);
   }
+  assert.ok(read('install.sh').includes('systemctl --user restart stellarcortex.service'));
   const needs = compact(read('scripts/install-computer.mjs')).match(
     /NEEDS=\{memoryMiB:(\d+)\+(\d+),diskGiB:(\d+)\}/,
   );

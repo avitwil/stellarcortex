@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# Turns StellarCortex on and off for the user who installed it.
+# --start and --stop act now and leave what happens at boot alone. --enable and --disable act now and change it,
+# for the tool and for its computer.
+set -uo pipefail
+service=stellarcortex.service
+socket=/run/stellarcortex-desktop-broker/broker.sock
+# Written last by the computer's install. The socket cannot say this: it is gone while the broker is down.
+installed=/etc/stellarcortex/desktop-broker.json
+fail(){ echo "stcortex: $1" >&2; exit 1; }
+usage(){ echo 'Usage: stcortex --start | --stop | --enable | --disable' >&2; exit 2; }
+[ "$#" = 1 ] || usage
+case "$1" in --start|--stop|--enable|--disable) ;; *) usage ;; esac
+[ "$(id -u)" != 0 ] || fail 'run this as the user who installed StellarCortex, not as root.'
+[ -e "$HOME/.config/systemd/user/$service" ] || fail 'StellarCortex is not installed for this user. Get it from https://stellarcortex.avitwil.io.'
+# A cron job or a su session may not have this, and the user's systemd needs it.
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+app(){ systemctl --user "$@"; }
+# The app's user owns this socket, so the computer needs no root here.
+# Every caller says in plain words what a failure means, so curl's own message is not shown.
+broker(){ curl -s --max-time 20 --unix-socket "$socket" -H 'Content-Type: application/json' -d "$2" "http://broker$1" 2>/dev/null; }
+state_of(){ [[ "$1" =~ \"state\":\"([a-z-]+)\" ]] && echo "${BASH_REMATCH[1]}"; }
+# Prints nothing on a host with no computer.
+computer_state(){
+ local reply
+ [ -e "$installed" ] || return 0
+ reply=$(broker /computer-build '{}') || return 1
+ state_of "$reply"
+}
+start_computer(){
+ local i state
+ broker /computer-build '{"retry":true}' >/dev/null || fail 'the virtual computer could not be reached.'
+ for ((i = 0; i < 150; i++)); do
+  state=$(computer_state) || fail 'the virtual computer could not be reached.'
+  [ "$state" = ready ] && { echo 'The virtual computer started.'; return; }
+  [ "$state" = starting ] || break
+  sleep 2
+ done
+ fail 'the virtual computer did not start. See Settings > Computer.'
+}
+do_start(){
+ local computer changed=
+ if ! app is-active --quiet "$service"; then
+  app start "$service" || fail 'StellarCortex did not start. See: journalctl --user -u stellarcortex'
+  echo 'StellarCortex started.'
+  changed=1
+ fi
+ computer=$(computer_state) || fail 'the virtual computer could not be reached.'
+ case "$computer" in
+  stopped)
+   start_computer
+   changed=1
+   ;;
+  failed|not-started)
+   echo 'The virtual computer is not ready. See Settings > Computer.'
+   changed=1
+   ;;
+ esac
+ [ -n "$changed" ] || echo 'StellarCortex is already running.'
+}
+# Reads the computer first: a build must finish, so stopping waits for it and changes nothing.
+stop_allowed(){
+ computer=$(computer_state) || computer=unreachable
+ case "$computer" in
+  building|starting) fail 'the virtual computer is being prepared, so nothing was changed. Run this again when it finishes.' ;;
+ esac
+}
+shut_down(){
+ local i reply
+ echo 'Shutting down the virtual computer. This can take a minute.'
+ reply=$(broker /computer-stop '{}') || fail 'the virtual computer could not be reached, so it may still be on.'
+ [ "$(state_of "$reply")" = ready ] || fail 'the virtual computer could not be shut down. Update StellarCortex, then run this again.'
+ for ((i = 1; i <= 60; i++)); do
+  [ "$(computer_state)" = stopped ] && { echo 'The virtual computer is off.'; return; }
+  sleep 2
+  # A guest that is still booting misses the request, so it is asked again until it listens.
+  [ $((i % 5)) != 0 ] || broker /computer-stop '{}' >/dev/null
+ done
+ fail 'the virtual computer did not shut down within 2 minutes. It may still be starting, so run this again in a minute.'
+}
+do_stop(){
+ local changed=
+ stop_allowed
+ if app is-active --quiet "$service"; then
+  app stop "$service" || fail 'StellarCortex did not stop. See: journalctl --user -u stellarcortex'
+  echo 'StellarCortex stopped. Bots and data are kept.'
+  changed=1
+ fi
+ [ "$computer" != unreachable ] || fail 'the virtual computer could not be reached, so it may still be on.'
+ if [ "$computer" = ready ]; then
+  shut_down
+  changed=1
+ fi
+ [ -n "$changed" ] || echo 'StellarCortex is already stopped.'
+}
+# The switch in Settings > Computer, so Settings shows the result. A host with no computer has none.
+computer_boot(){
+ local reply
+ [ -e "$installed" ] || return 0
+ reply=$(broker /boot-policy "{\"enabled\":$1}") || fail "$2"
+ [[ "$reply" == *"\"enabled\":$1"* ]] || fail "$2"
+}
+do_enable(){
+ local name
+ name=$(id -un)
+ # Without this the user's services wait for a login.
+ if [ "$(loginctl show-user "$name" --property=Linger --value 2>/dev/null)" != yes ]; then
+  echo 'Starting at boot with no login needs root once, so sudo may ask for your password.'
+  sudo loginctl enable-linger "$name" || fail "could not set that up. Run: sudo loginctl enable-linger $name"
+ fi
+ computer_boot true 'could not set the virtual computer to start at boot, so StellarCortex was not started. See: systemctl status stellarcortex-desktop-broker.service'
+ if app is-enabled --quiet "$service"; then
+  echo 'StellarCortex is already set to start at boot.'
+ else
+  app enable "$service" || fail 'could not set StellarCortex to start at boot.'
+  echo 'StellarCortex will start at boot.'
+ fi
+ do_start
+}
+do_disable(){
+ stop_allowed
+ computer_boot false 'could not cancel the start at boot of the virtual computer, so nothing else was changed. See: systemctl status stellarcortex-desktop-broker.service'
+ if app is-enabled --quiet "$service"; then
+  app disable "$service" || fail 'could not cancel the start at boot.'
+  echo 'StellarCortex will not start at boot.'
+ else
+  echo 'StellarCortex is already set not to start at boot.'
+ fi
+ do_stop
+}
+case "$1" in
+ --start) do_start ;;
+ --stop) do_stop ;;
+ --enable) do_enable ;;
+ --disable) do_disable ;;
+esac

@@ -45,6 +45,64 @@ function request(
     req.end(body ? JSON.stringify(body) : undefined);
   });
 }
+test(
+  'a tailnet address set with no socket opens the socket',
+  { skip: process.platform === 'win32' },
+  async t => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scx-ui-socket-')),
+      saved = process.env.STELLARCORTEX_TAILNET_UI_URL;
+    process.env.STELLARCORTEX_TAILNET_UI_URL = 'https://box.tail1.ts.net/';
+    t.after(() => {
+      if (saved === undefined) delete process.env.STELLARCORTEX_TAILNET_UI_URL;
+      else process.env.STELLARCORTEX_TAILNET_UI_URL = saved;
+    });
+    const app = await createApp({
+      dataDir: dir,
+      port: 0,
+      startEngine: false,
+      runtime: new Fake(),
+      claudeRuntime: new Fake(),
+    });
+    try {
+      assert.equal(fs.statSync(path.join(dir, 'tailscale-ui.sock')).mode & 0o777, 0o600);
+    } finally {
+      await app.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  },
+);
+test(
+  'a sign-in over the tailnet gets a Secure cookie, and one on localhost does not',
+  { skip: process.platform === 'win32' },
+  async t => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scx-ui-socket-')),
+      socket = path.join(dir, 'tailscale-ui.sock'),
+      host = 'synthetic.example.ts.net',
+      app = await createApp({
+        dataDir: dir,
+        port: 0,
+        startEngine: false,
+        runtime: new Fake(),
+        claudeRuntime: new Fake(),
+        uiSocket: socket,
+        trustedUiOrigin: 'https://' + host,
+      });
+    t.after(async () => {
+      await app.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+    const session = { method: 'POST', body: { key: app.accessKey } };
+    const over = await request(app, socket, '/api/session', {
+      ...session,
+      host: 'localhost',
+      forwardedHost: host,
+      forwardedProto: 'https',
+    });
+    assert.match(over.headers['set-cookie'][0], /; Secure/);
+    const local = await request(app, socket, '/api/session', session);
+    assert.doesNotMatch(local.headers['set-cookie'][0], /; Secure/);
+  },
+);
 test('private Tailnet upstream has0600 permissions and preserves application authentication', async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scx-ui-socket-')),
     socket = path.join(dir, 'tailscale-ui.sock');
