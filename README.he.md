@@ -8,6 +8,8 @@
 
 גרסה **0.1.3** · [רישיון MIT](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · אתר: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
 
+אפליקציית Windows: [StellarCortex Desktop](https://github.com/avitwil/stellarcortex-desktop) · [stellarcortex.avitwil.io/desktop.html](https://stellarcortex.avitwil.io/desktop.html)
+
 יוצרים בוטים לפי הצורך, משוחחים איתם, נותנים להם לחלק עבודה ביניהם ועוקבים אחרי השיחות והתוצאות. לכל בוט אפשר לבחור ספק ומודל משלו: חשבון אצל ספק, מפתח API, או שרת מודל מקומי שכבר רץ אצלכם.
 
 **תוכן:** [יכולות](#features) · [דרישות](#requirements) · [התקנה](#installation) · [דרכים להפעלה](#ways-to-run) · [הפעלה ראשונה](#first-run) · [חשבונות ומודלים](#models) · [תנאי הספקים](#provider-terms) · [כלים וקול](#tools) · [מחשבים לבוטים](#computer) · [הגדרות](#configuration) · [נתונים ואבטחה](#data) · [עדכון](#updating) · [פתרון תקלות](#troubleshooting) · [תיעוד](#documentation) · [פיתוח](#development) · [רישיון](#license)

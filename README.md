@@ -8,6 +8,8 @@
 
 Version **0.1.3** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
 
+Windows app: [StellarCortex Desktop](https://github.com/avitwil/stellarcortex-desktop) · [stellarcortex.avitwil.io/desktop.html](https://stellarcortex.avitwil.io/desktop.html)
+
 Create bots when you need them, talk to them, let them delegate work to each other, and follow their conversations and results. Each bot can use its own provider and model: a provider account, an API key, or a local model server you already run.
 
 **Contents:** [Features](#features) · [Requirements](#requirements) · [Installation](#installation) · [Ways to run it](#ways-to-run) · [First run](#first-run) · [Accounts and models](#models) · [Provider terms](#provider-terms) · [Tools and voice](#tools) · [Bot computers](#computer) · [Configuration](#configuration) · [Data and security](#data) · [Updating](#updating) · [Troubleshooting](#troubleshooting) · [Documentation](#documentation) · [Development](#development) · [License](#license)
