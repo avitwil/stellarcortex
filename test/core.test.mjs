@@ -281,6 +281,52 @@ test('clear conversation needs a session and refuses a chat with queued work', a
     false,
   );
 });
+test('continue in a new conversation needs a session, waits for queued work and resends the last owner message', async t => {
+  const app = await createApp({
+    dataDir: temp(t),
+    port: 0,
+    runtime: new FakeCodex(),
+    startEngine: false,
+  });
+  t.after(() => app.close());
+  const base = `http://127.0.0.1:${app.server.address().port}`,
+    client = { 'Content-Type': 'application/json', 'X-StellarCortex-Client': '1' },
+    chat = app.store.data.chats[0],
+    url = `${base}/api/chats/${chat.id}/continue`;
+  assert.equal((await fetch(url, { method: 'POST', headers: client, body: '{}' })).status, 401);
+  const headers = {
+    ...client,
+    Cookie: (
+      await fetch(base + '/api/session', {
+        method: 'POST',
+        headers: client,
+        body: JSON.stringify({ key: app.accessKey }),
+      })
+    ).headers
+      .get('set-cookie')
+      .split(';')[0],
+  };
+  app.store.message(chat.id, 'user', 'Create a bot named Helper');
+  chat.externalContent = true;
+  const job = { id: 'queued', chatId: chat.id, botId: chat.botIds[0], status: 'queued' };
+  app.store.data.jobs.push(job);
+  const refused = await fetch(url, { method: 'POST', headers, body: '{}' });
+  assert.equal(refused.status, 400);
+  assert.match((await refused.json()).error, /Wait for the work/);
+  assert.equal(chat.externalContent, true);
+  job.status = 'completed';
+  const sent = await fetch(url, { method: 'POST', headers, body: '{}' });
+  assert.equal(sent.status, 202);
+  const { jobs } = await sent.json();
+  assert.equal(jobs.length, 1);
+  assert.equal(jobs[0].text, 'Create a bot named Helper');
+  assert.equal(jobs[0].external, undefined);
+  assert.equal(chat.externalContent, undefined);
+  assert.equal(
+    app.store.data.messages.filter(m => m.chatId === chat.id && m.role === 'user').length,
+    2,
+  );
+});
 test('HTTP blocks unauthenticated access, CSRF and hostile hosts; authenticated changes persist', async t => {
   const app = await createApp({
     dataDir: temp(t),

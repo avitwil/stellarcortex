@@ -6,7 +6,7 @@
 
 **A self-hosted, open-source workspace of AI teammates for Linux, inspired by Grok Bot.**
 
-Version **0.1.3** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
+Version **0.1.4** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
 
 Windows app: [StellarCortex Desktop](https://github.com/avitwil/stellarcortex-desktop) · [stellarcortex.avitwil.io/desktop.html](https://stellarcortex.avitwil.io/desktop.html)
 
@@ -441,6 +441,8 @@ Some tests need Linux. See [Testing and validation](docs/VALIDATION.md). To publ
 [MIT](LICENSE). The software is provided "as is", without warranty of any kind. StellarCortex is an independent project and is not affiliated with or endorsed by xAI, OpenAI, Anthropic or any other provider. Bundled files, dependencies and downloaded software keep their own licenses and terms: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Some are not open source, and they stay installed from their own source on your machine. Check [Provider terms](#provider-terms) before you connect a service.
 
 ## Version history
+
+**0.1.4** — Fewer false "external content" blocks: a failed tool call, or the built-in Google tool list, no longer blocks a chat. A blocked chat now has "Continue in a new conversation", which starts clean and re-sends your last message. The block notice now names the real actions.
 
 **0.1.3** — replies now appear by themselves after the app restarts with a page open. A page open from before the update needs one reload.
 

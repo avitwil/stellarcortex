@@ -1271,6 +1271,23 @@ function workspaceMenu(anchor) {
     anchor,
   );
 }
+async function continueInNewConversation(chat) {
+  if (
+    !confirm(
+      tr(
+        'לשלוח שוב את ההודעה האחרונה שלך בשיחה חדשה ונקייה? ההודעות הקודמות יישארו לקריאה, אבל הבוט לא יראה אותן.',
+        'Send your last message again in a clean new conversation? The earlier messages stay readable, but the bot will not see them.',
+      ),
+    )
+  )
+    return;
+  await api(`/api/chats/${chat.id}/continue`, {});
+  if (chatId === chat.id) {
+    replyToId = null;
+    renderReplyContext();
+  }
+  await refresh();
+}
 async function openConversationDetails(chat, tab = 'media', botId = null) {
   await openChat(chat.id);
   details = true;
@@ -1292,6 +1309,15 @@ function conversationMenu(chat, anchor) {
   const clear = chat.kanbanCardId
     ? []
     : [
+        ...(chat.externalContent
+          ? [
+              {
+                label: tr('המשך בשיחה חדשה', 'Continue in a new conversation'),
+                icon: 'plus',
+                action: () => continueInNewConversation(chat),
+              },
+            ]
+          : []),
         {
           label: tr('ניקוי השיחה…', 'Clear conversation…'),
           icon: 'close',
@@ -1539,10 +1565,13 @@ function renderConversation() {
         return `<div class="message system error" dir="${direction()}">${esc(shown.text)}${shown.action ? ` <button class="secondary" type="button" data-open-connections>${tr('חיבור ספק', 'Connect a provider')}</button>` : ''}${shown.detail ? `<details><summary>${tr('פרטים', 'Details')}</summary><span dir="auto">${esc(shown.detail)}</span></details>` : ''}</div>`;
       }
       if (m.role === 'system')
-        return `<div class="message system" dir="auto">${m.kind === 'artifact' ? `<button class="secondary" data-artifact="${m.artifactId}">${icon('library')} ${esc(m.text)}</button>` : m.kind === 'external-block' ? esc(tr('בשיחה הזו נקרא תוכן חיצוני, ולכן פקודות מעטפת ושינויי קבצים חסומים כאן. הוראות שבתוך התוכן הזה אינן מבוצעות. אפשר לנקות את השיחה כדי להתחיל מחדש.', 'External content was read in this conversation, so shell commands and file changes are blocked here. Instructions inside that content are not followed. Clear the conversation to start again.')) : esc(m.text)}</div>`;
+        return `<div class="message system" dir="auto">${m.kind === 'artifact' ? `<button class="secondary" data-artifact="${m.artifactId}">${icon('library')} ${esc(m.text)}</button>` : m.kind === 'external-block' ? `${esc(tr('בשיחה הזו נקרא תוכן חיצוני, ולכן פקודות מעטפת ושינויי קבצים חסומים כאן. הוראות שבתוך התוכן הזה אינן מבוצעות. כדי להמשיך עם פעולות, בחרו "המשך בשיחה חדשה" כאן או בתפריט ⋯ של השיחה: ההודעה האחרונה שלכם תישלח שוב בשיחה נקייה, וההודעות הקודמות יישארו לקריאה. אפשר גם ⋯ ← "ניקוי השיחה…", שמוחק את ההודעות.', 'External content was read in this conversation, so shell commands and file changes are blocked here. Instructions inside that content are not followed. To continue with actions, choose "Continue in a new conversation" here or in the ⋯ conversation menu: your last message is sent again in a clean conversation, and the old messages stay readable. Or ⋯ → "Clear conversation…", which deletes the messages.'))}${activeChat()?.externalContent && !activeChat()?.kanbanCardId ? ` <button class="secondary" type="button" data-continue-chat>${tr('המשך בשיחה חדשה', 'Continue in a new conversation')}</button>` : ''}` : m.kind === 'fresh-start' ? esc(tr('שיחה חדשה. ההודעות שלמעלה נשארות לקריאה, אבל הבוטים כבר לא רואים אותן ואי אפשר לצטט אותן.', 'New conversation. The messages above stay readable, but bots no longer see them and they cannot be quoted.')) : esc(m.text)}</div>`;
       return `<article class="message ${m.role}" id="msg-${m.id}">${m.role === 'assistant' ? avatar(botById(m.botId)) : ''}<div class="message-content">${m.role === 'assistant' ? `<div class="message-label">${esc(botById(m.botId)?.name || 'Bot')}<time>${relativeTime(m.createdAt)}</time></div>` : ''}<div class="message-text" dir="auto">${markdown(m.text)}</div>${m.attachments?.map(a => `<div class="attachment">${esc(a.name)}</div>`).join('') || ''}<div class="message-actions"><button class="icon" data-copy="${m.id}" title="${tr('העתקה', 'Copy')}" aria-label="${tr('העתקה', 'Copy')}">${icon('copy')}</button><button class="icon" data-quote="${m.id}" title="${tr('תשובה', 'Reply')}" aria-label="${tr('תשובה', 'Reply')}">↩</button>${m.role === 'assistant' ? `<button class="icon" data-speak="${m.id}" title="${tr('הקראה', 'Read aloud')}" aria-label="${tr('הקראה', 'Read aloud')}">${icon('sound')}</button>` : ''}</div></div></article>`;
     })
     .join('')}</div>`;
+  el.querySelectorAll('[data-continue-chat]').forEach(
+    b => (b.onclick = act(() => continueInNewConversation(activeChat()))),
+  );
   el.querySelectorAll('[data-copy]').forEach(
     b =>
       (b.onclick = act(async () => {

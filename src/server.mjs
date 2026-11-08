@@ -1046,7 +1046,7 @@ export async function createApp({
         const groupMatch = p.match(/^\/api\/groups\/([^/]+)$/);
         if (groupMatch && req.method === 'PATCH')
           return json(res, 200, store.updateGroup(groupMatch[1], await body(req)));
-        const chatMatch = p.match(/^\/api\/chats\/([^/]+)\/(messages|read|clear)$/);
+        const chatMatch = p.match(/^\/api\/chats\/([^/]+)\/(messages|read|clear|continue)$/);
         if (chatMatch && req.method === 'POST') {
           const chat = store.chat(chatMatch[1]),
             b = await body(req);
@@ -1059,6 +1059,8 @@ export async function createApp({
             engine.clearConversation(chat.id);
             return json(res, 200, { ok: true });
           }
+          if (chatMatch[2] === 'continue')
+            return json(res, 202, { jobs: engine.continueInNewConversation(chat.id) });
           const attachments = [];
           if ((b.attachments || []).length > 6)
             throw new Error('At most six attachments per message');

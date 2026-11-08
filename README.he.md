@@ -6,7 +6,7 @@
 
 **סביבת עבודה של עמיתי AI בקוד פתוח, בהתקנה עצמאית על Linux, בהשראת Grok Bot.**
 
-גרסה **0.1.3** · [רישיון MIT](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · אתר: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
+גרסה **0.1.4** · [רישיון MIT](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · אתר: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
 
 אפליקציית Windows: [StellarCortex Desktop](https://github.com/avitwil/stellarcortex-desktop) · [stellarcortex.avitwil.io/desktop.html](https://stellarcortex.avitwil.io/desktop.html)
 
@@ -441,6 +441,8 @@ npm run format      # applies the formatting
 [MIT](LICENSE). התוכנה מסופקת "כפי שהיא" (as is), ללא אחריות מכל סוג. ‏StellarCortex הוא פרויקט עצמאי ואינו קשור ל־xAI,‏ ל־OpenAI,‏ ל־Anthropic או לכל ספק אחר, ואינו מאושר על ידם. קבצים כלולים, תלויות ותוכנות שמורדות שומרים על הרישיונות והתנאים שלהם: ראו [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). חלקם אינם קוד פתוח, והם מותקנים מהמקור שלהם במחשב שלכם. לפני חיבור שירות בדקו את [תנאי הספקים](#provider-terms).
 
 ## היסטוריית גרסאות
+
+**0.1.4** — פחות חסימות שווא של "תוכן חיצוני": קריאת כלי שנכשלה, או רשימת הכלים המובנית של Google, כבר לא חוסמות שיחה. בשיחה חסומה יש עכשיו "המשך בשיחה חדשה", שמתחילה נקייה ושולחת מחדש את ההודעה האחרונה שלך. הודעת החסימה מציינת עכשיו את הפעולות האמיתיות.
 
 **0.1.3** — התגובות מופיעות עכשיו מעצמן גם אחרי שהכלי מופעל מחדש כשדף פתוח. דף שנפתח לפני העדכון צריך רענון אחד.
 
