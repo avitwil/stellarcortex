@@ -5,6 +5,13 @@ import path from 'node:path';
 import http from 'node:http';
 import { EventEmitter } from 'node:events';
 import { createApp } from '../src/server.mjs';
+import { Store } from '../src/store.mjs';
+import { McpSecretStore } from '../src/mcp-secret-store.mjs';
+import {
+  removeGoogleConnection,
+  revokeGoogleToken,
+  revokeRemovedGoogle,
+} from '../src/google-removal.mjs';
 
 class Runtime extends EventEmitter {
   async stop() {}
@@ -12,56 +19,45 @@ class Runtime extends EventEmitter {
     throw new Error('No model calls expected');
   }
 }
-class GoogleStub extends EventEmitter {
-  status() {
+class McpStub extends EventEmitter {
+  flows = new Map();
+  owners = [];
+  getPublic(id) {
+    return { id, name: id, connected: false, revision: 'one', status: 'disconnected' };
+  }
+  list() {
+    return { connections: ['first', 'second'].map(id => this.getPublic(id)) };
+  }
+  async connect(id, { owner, redirectUri }) {
+    this.owners.push(owner);
+    this.redirectUri = redirectUri;
+    this.flows.set(id, owner);
     return {
-      configured: true,
-      connected: !!this.connected,
-      hasClientSecret: true,
-      services: ['drive'],
-      readOnly: true,
-      revision: 'google-1',
+      connection: this.getPublic(id),
+      authorizationUrl: `https://oauth.example.test/authorize?state=${id}`,
     };
   }
-  configure() {
-    return this.status();
+  async completeAuth({ state, code }, { owner }) {
+    assert.equal(this.flows.get(state), owner);
+    assert.equal(code, 'test-code');
+    this.flows.delete(state);
+    return { id: state, connected: true };
   }
-  async startAuth({ owner, redirectUri }) {
-    this.flow = { owner, redirectUri, state: 'test-google-state' };
-    return {
-      authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?state=${this.flow.state}`,
-    };
-  }
-  async completeAuth(input, { owner }) {
-    assert(this.flow);
-    assert.equal(owner, this.flow.owner);
-    assert.equal(input.state, this.flow.state);
-    assert.equal(input.code, 'test-code');
-    this.flow = null;
-    this.connected = true;
-    return this.status();
-  }
-  disconnect() {
-    this.connected = false;
-    return this.status();
-  }
-  listTools() {
-    return { tools: [], revision: 'google-1' };
-  }
+  async close() {}
 }
 async function fixture(t, options = {}) {
   const root = path.resolve('.test-data');
   fs.mkdirSync(root, { recursive: true });
   const dir = fs.mkdtempSync(path.join(root, 'connections-http-'));
-  const google = options.googleService || new GoogleStub();
+  const { prepare, ...appOptions } = options;
+  prepare?.(dir);
   const app = await createApp({
     dataDir: dir,
     port: 0,
     startEngine: false,
     runtime: new Runtime(),
     claudeRuntime: new Runtime(),
-    googleService: google,
-    ...options,
+    ...appOptions,
   });
   t.after(async () => {
     await app.close();
@@ -84,7 +80,7 @@ async function fixture(t, options = {}) {
     });
     return { status: response.status, data: await response.json(), headers: response.headers };
   };
-  return { app, google, base, headers, api, sessionCookie: login.headers.get('set-cookie') };
+  return { app, dir, base, headers, api, sessionCookie: login.headers.get('set-cookie') };
 }
 async function mcpEndpoint(t) {
   const requests = [];
@@ -149,7 +145,7 @@ test('independent MCP routes protect secrets and expose real SDK tools to the sh
   const remote = await mcpEndpoint(t),
     f = await fixture(t),
     secret = 'independent-test-secret';
-  for (const route of ['/api/connections', '/api/mcp/connections', '/api/google/status'])
+  for (const route of ['/api/connections', '/api/mcp/connections'])
     assert.equal((await fetch(f.base + route)).status, 401);
   assert.equal(
     (
@@ -210,33 +206,33 @@ test('independent MCP routes protect secrets and expose real SDK tools to the sh
   assert.equal((await f.api('/api/mcp/connections')).data.connections.length, 0);
 });
 
-test('Google OAuth callback is browser bound without weakening the Strict application session', async t => {
-  const f = await fixture(t);
-  const started = await f.api('/api/google/connect', {});
-  assert.match(started.data.authorizationUrl, /^https:\/\/accounts.google.com\//);
+test('MCP OAuth callback is browser bound without weakening the Strict application session', async t => {
+  const mcp = new McpStub(),
+    f = await fixture(t, { mcpService: mcp });
+  const started = await f.api('/api/mcp/connections/first/connect', {});
+  assert.match(started.data.authorizationUrl, /^https:\/\/oauth.example.test\//);
   const oauthCookie = started.headers.getSetCookie()[0];
-  assert.match(oauthCookie, /HttpOnly; SameSite=Lax; Path=\/api\/google; Max-Age=600/);
+  assert.match(oauthCookie, /HttpOnly; SameSite=Lax; Path=\/api\/mcp; Max-Age=600/);
   assert(!oauthCookie.includes('stellarcortex_session='));
   assert.match(f.sessionCookie, /SameSite=Strict/);
-  assert.equal(f.google.flow.redirectUri, f.base + '/api/google/oauth/callback');
-  const callback = f.base + '/api/google/oauth/callback?state=test-google-state&code=test-code';
+  assert.equal(mcp.redirectUri, f.base + '/api/mcp/oauth/callback');
+  const callback = f.base + '/api/mcp/oauth/callback?state=first&code=test-code';
   assert.equal((await fetch(callback, { redirect: 'manual' })).status, 400);
   const wrong = await fetch(callback, {
-    headers: { Cookie: `stellarcortex_google_oauth=${'b'.repeat(64)}` },
+    headers: { Cookie: `stellarcortex_mcp_oauth=${'b'.repeat(64)}` },
     redirect: 'manual',
   });
   assert.equal(wrong.status, 303);
   assert.match(wrong.headers.get('location'), /result=error/);
-  assert.equal(f.google.connected, undefined);
+  assert.equal(mcp.flows.size, 1);
   const result = await fetch(callback, {
     headers: { Cookie: oauthCookie.split(';')[0] },
     redirect: 'manual',
   });
   assert.equal(result.status, 303);
-  assert.equal(result.headers.get('location'), '/?connections=google&result=connected');
-  assert.equal(f.google.connected, true);
+  assert.equal(result.headers.get('location'), '/?connections=mcp&result=connected');
+  assert.equal(mcp.flows.size, 0);
   assert.equal(result.headers.get('referrer-policy'), 'no-referrer');
-  assert.equal((await f.api('/api/google/status')).data.connected, true);
   const replay = await fetch(callback, {
     headers: { Cookie: oauthCookie.split(';')[0] },
     redirect: 'manual',
@@ -244,7 +240,7 @@ test('Google OAuth callback is browser bound without weakening the Strict applic
   assert.match(replay.headers.get('location'), /result=error/);
   assert.equal(
     (
-      await fetch(f.base + '/api/google/connect', {
+      await fetch(f.base + '/api/mcp/connections/first/connect', {
         method: 'POST',
         headers: { 'X-StellarCortex-Client': '1' },
         body: '{}',
@@ -255,31 +251,6 @@ test('Google OAuth callback is browser bound without weakening the Strict applic
 });
 
 test('OAuth owner cookies are reused by subsequent Connect requests and preserve pending MCP sign-ins', async t => {
-  class McpStub extends EventEmitter {
-    flows = new Map();
-    owners = [];
-    getPublic(id) {
-      return { id, name: id, connected: false, revision: 'one', status: 'disconnected' };
-    }
-    list() {
-      return { connections: ['first', 'second'].map(id => this.getPublic(id)) };
-    }
-    async connect(id, { owner }) {
-      this.owners.push(owner);
-      this.flows.set(id, owner);
-      return {
-        connection: this.getPublic(id),
-        authorizationUrl: `https://oauth.example.test/authorize?state=${id}`,
-      };
-    }
-    async completeAuth({ state, code }, { owner }) {
-      assert.equal(this.flows.get(state), owner);
-      assert.equal(code, 'test-code');
-      this.flows.delete(state);
-      return { id: state, connected: true };
-    }
-    async close() {}
-  }
   const mcp = new McpStub(),
     f = await fixture(t, { mcpService: mcp }),
     sessionCookie = f.headers.Cookie;
@@ -302,7 +273,6 @@ test('OAuth owner cookies are reused by subsequent Connect requests and preserve
   );
   const connectCookie = cookieFor(mcpCookie, '/api/mcp/connections/second/connect');
   assert.ok(connectCookie);
-  assert.equal(cookieFor(mcpCookie, '/api/google/connect'), '');
   f.headers.Cookie = `${sessionCookie}; ${connectCookie}`;
   const second = await f.api('/api/mcp/connections/second/connect', {});
   assert.equal(second.headers.getSetCookie()[0].split(';')[0], connectCookie);
@@ -317,15 +287,166 @@ test('OAuth owner cookies are reused by subsequent Connect requests and preserve
   }
   assert.equal(mcp.flows.size, 0);
   f.headers.Cookie = sessionCookie;
-  const googleFirst = await f.api('/api/google/connect', {}),
-    googleOwner = f.google.flow.owner,
-    googleCookie = googleFirst.headers.getSetCookie()[0];
-  const googleConnectCookie = cookieFor(googleCookie, '/api/google/connect');
-  assert.ok(googleConnectCookie);
-  assert.equal(cookieFor(googleCookie, '/api/mcp/connections/first/connect'), '');
-  f.headers.Cookie = `${sessionCookie}; ${googleConnectCookie}`;
-  const googleSecond = await f.api('/api/google/connect', {});
-  assert.equal(googleSecond.headers.getSetCookie()[0].split(';')[0], googleConnectCookie);
-  assert.equal(f.google.flow.owner, googleOwner);
   assert.match(f.sessionCookie, /SameSite=Strict/);
+});
+
+const plantGoogle = dir => {
+  fs.mkdirSync(path.join(dir, 'private'), { recursive: true });
+  for (const name of ['google-connection.enc', 'google-connection.key', 'mcp-connections.key'])
+    fs.writeFileSync(path.join(dir, 'private', name), 'saved');
+};
+test('an upgrade deletes saved Google connector credentials and shows the removal notice once', async t => {
+  const revoked = [],
+    f = await fixture(t, {
+      prepare: plantGoogle,
+      googleRevoke: async token => revoked.push(token),
+    }),
+    file = name => path.join(f.dir, 'private', name);
+  assert.equal(fs.existsSync(file('google-connection.enc')), false);
+  assert.equal(fs.existsSync(file('google-connection.key')), false);
+  assert.equal(fs.existsSync(file('mcp-connections.key')), true);
+  const saved = () => JSON.parse(fs.readFileSync(path.join(f.dir, 'state.json'), 'utf8'));
+  assert.deepEqual(saved().notices, ['google-removed']);
+  assert.deepEqual((await f.api('/api/state')).data.notices, ['google-removed']);
+  // A reload right after, inside the toast's time, gets no notice: it was marked seen on delivery.
+  assert.deepEqual((await f.api('/api/state')).data.notices, []);
+  assert.deepEqual(saved().notices, []);
+  assert.equal((await f.api('/api/google/status')).status, 404);
+  // The planted files cannot be decrypted, so there was no token to revoke.
+  assert.deepEqual(revoked, []);
+});
+const scratch = (t, name) => {
+  const root = path.resolve('.test-data');
+  fs.mkdirSync(root, { recursive: true });
+  const dir = fs.mkdtempSync(path.join(root, name));
+  t.after(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir + '-updates', { recursive: true, force: true });
+  });
+  return dir;
+};
+test('the Google removal notice is added once per upgrade and not on a fresh install', t => {
+  const dir = scratch(t, 'google-removal-'),
+    load = () => {
+      const store = new Store(dir);
+      removeGoogleConnection(store, { managerDirs: [] });
+      return store;
+    };
+  assert.equal(load().data.notices, undefined);
+  plantGoogle(dir);
+  assert.deepEqual(load().data.notices, ['google-removed']);
+  // A stop after the save but before the files were deleted adds no second notice.
+  plantGoogle(dir);
+  const again = load();
+  assert.deepEqual(again.data.notices, ['google-removed']);
+  again.data.notices = [];
+  again.save();
+  assert.deepEqual(load().data.notices, []);
+});
+test('an upgrade revokes the saved Google token in the background and purges update backups', async t => {
+  const backup = name => path.join(name + '-updates', 'backups', 'failed-1', 'private');
+  let release;
+  const revoked = [],
+    f = await fixture(t, {
+      prepare(dir) {
+        t.after(() => fs.rmSync(dir + '-updates', { recursive: true, force: true }));
+        new McpSecretStore(dir, 'google-connection').save({
+          version: 1,
+          clientSecret: 'client-secret-canary',
+          tokens: { refreshToken: 'refresh-canary', accessToken: 'access-canary' },
+        });
+        fs.mkdirSync(backup(dir), { recursive: true });
+        for (const name of [
+          'google-connection.enc',
+          'google-connection.key',
+          'mcp-connections.enc',
+        ])
+          fs.copyFileSync(
+            path.join(dir, 'private', 'google-connection.enc'),
+            path.join(backup(dir), name),
+          );
+      },
+      // Never settles: startup must not wait for it.
+      googleRevoke: token => {
+        revoked.push(token);
+        return new Promise(resolve => (release = resolve));
+      },
+    });
+  assert.deepEqual(revoked, ['refresh-canary']);
+  assert.deepEqual(fs.readdirSync(backup(f.dir)), ['mcp-connections.enc']);
+  // Only the token waits, encrypted, until Google confirms; the client secret is gone.
+  assert.deepEqual(
+    fs
+      .readdirSync(path.join(f.dir, 'private'))
+      .filter(n => n.startsWith('google'))
+      .sort(),
+    ['google-revoke-pending.enc', 'google-revoke-pending.key'],
+  );
+  release(true);
+});
+test('a failed revoke is retried at the next start and cleared once Google confirms', async t => {
+  const dir = scratch(t, 'google-retry-'),
+    pending = path.join(dir, 'private', 'google-revoke-pending.enc'),
+    calls = [];
+  new McpSecretStore(dir, 'google-connection').save({ tokens: { refreshToken: 'refresh-canary' } });
+  removeGoogleConnection(new Store(dir), { managerDirs: [] });
+  t.mock.method(console, 'warn', () => {});
+  await revokeRemovedGoogle(dir, async token => (calls.push(token), false));
+  assert.equal(fs.existsSync(pending), true);
+  removeGoogleConnection(new Store(dir), { managerDirs: [] });
+  await revokeRemovedGoogle(dir, async token => (calls.push(token), true));
+  assert.deepEqual(calls, ['refresh-canary', 'refresh-canary']);
+  assert.equal(fs.existsSync(pending), false);
+  await revokeRemovedGoogle(dir, async token => (calls.push(token), true));
+  assert.equal(calls.length, 2);
+});
+test('a Google file that cannot be deleted does not stop the start, and the log holds no secret', t => {
+  const dir = scratch(t, 'google-stuck-'),
+    warnings = [];
+  new McpSecretStore(dir, 'google-connection').save({ tokens: { refreshToken: 'refresh-canary' } });
+  // A directory in place of the key file makes the delete fail on every platform.
+  fs.rmSync(path.join(dir, 'private', 'google-connection.key'));
+  fs.mkdirSync(path.join(dir, 'private', 'google-connection.key', 'inner'), { recursive: true });
+  t.mock.method(console, 'warn', message => warnings.push(message));
+  const store = new Store(dir);
+  assert.doesNotThrow(() => removeGoogleConnection(store, { managerDirs: [] }));
+  assert.deepEqual(store.data.notices, ['google-removed']);
+  assert.equal(fs.existsSync(path.join(dir, 'private', 'google-connection.enc')), false);
+  assert.equal(warnings.length, 1);
+  assert.doesNotMatch(warnings[0], /canary|private/);
+});
+test('Google token revocation posts the token to Google and reports failure or a hang as false', async () => {
+  const calls = [];
+  assert.equal(
+    await revokeGoogleToken('refresh-canary', {
+      fetchImpl: async (url, init) => {
+        calls.push({ url, init });
+        return { ok: true };
+      },
+    }),
+    true,
+  );
+  assert.equal(calls[0].url, 'https://oauth2.googleapis.com/revoke');
+  assert.equal(calls[0].init.method, 'POST');
+  assert.equal(calls[0].init.body, 'token=refresh-canary');
+  assert.equal(
+    await revokeGoogleToken('x', { fetchImpl: async () => ({ ok: false, status: 503 }) }),
+    false,
+  );
+  // Google answers 400 for a token that is already revoked: nothing left to retry.
+  assert.equal(
+    await revokeGoogleToken('x', { fetchImpl: async () => ({ ok: false, status: 400 }) }),
+    true,
+  );
+  assert.equal(
+    await revokeGoogleToken('x', {
+      fetchImpl: async () => {
+        throw new Error('offline');
+      },
+    }),
+    false,
+  );
+  const hang = (url, { signal }) =>
+    new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason)));
+  assert.equal(await revokeGoogleToken('x', { fetchImpl: hang, timeoutMs: 20 }), false);
 });

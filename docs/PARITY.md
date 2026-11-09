@@ -51,8 +51,8 @@ StellarCortex is an independent, self-hosted implementation. It is not an exact 
 | Shell and file operations | Implemented for bots with a computer | Host control: Codex/Claude native tools and approved host processes, with the server user's OS permissions. Virtual computer: guest tools. No computer: no shell |
 | Private networking | No built-in VPN/egress policy | Headless browser rejects private destinations; OS desktop applications follow their host/container network configuration |
 | Per-user microVM isolation | Not implemented | One trusted owner per installation; use separate OS users/VMs |
-| App connections | Implemented, external-account validation pending | Independent MCP registry and client, HTTP/SSE/stdio, API keys and OAuth, shared by all model providers; built-in Google connector. See CONNECTIONS.md |
-| OAuth plugin marketplace | Partial | Independent OAuth flows for MCP servers and Google; no hosted marketplace or pre-verified shared Google OAuth client, and no copied ChatGPT/Codex/Claude sessions |
+| App connections | Implemented, external-account validation pending | Independent MCP registry and client, HTTP/SSE/stdio, API keys and OAuth, shared by all model providers; Google through an MCP service. See CONNECTIONS.md |
+| OAuth plugin marketplace | Partial | Independent OAuth flows for MCP servers; no hosted marketplace, and no copied ChatGPT/Codex/Claude sessions |
 | Uploads | Implemented | Up to 6 files, 25 MB each, 36 MB combined JSON request limit |
 | Image/video/audio understanding | Model/tool dependent | Files are local inputs; processing depends on Codex's tools and installed programs |
 | Library and downloads | Implemented | Bot publishes workspace files; pin, preview, download |

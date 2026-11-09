@@ -51,6 +51,23 @@ function safeUrl(value, { oauth = false } = {}) {
     throw new Error('OAuth requires HTTPS or a loopback address');
   return url;
 }
+// A query string can hold a key (Composio puts user_id there), so the whole address is a secret.
+// It is stored encrypted with the record; the app shows only the origin and path.
+function shownUrl(value) {
+  if (!value) return '';
+  const url = new URL(value);
+  return url.search ? url.origin + url.pathname + '?…' : url.href;
+}
+function urlSecrets(value) {
+  try {
+    const url = new URL(value);
+    // Short values such as "1" would mangle tool output, so only long ones are matched alone.
+    const values = [...url.searchParams.values()].filter(value => value.length >= 8);
+    return url.search ? [url.href, url.search.slice(1), ...values] : [];
+  } catch {
+    return [];
+  }
+}
 class NeedsAuthorization extends Error {}
 
 export class McpConnections extends EventEmitter {
@@ -90,6 +107,7 @@ export class McpConnections extends EventEmitter {
       ]),
       record.oauth?.tokens?.access_token,
       record.oauth?.tokens?.refresh_token,
+      ...urlSecrets(record.url),
     ].filter(value => typeof value === 'string' && value);
   }
   redact(record, value) {
@@ -122,7 +140,7 @@ export class McpConnections extends EventEmitter {
       id: r.id,
       name: r.name,
       transport: r.transport,
-      url: r.url || '',
+      url: shownUrl(r.url),
       command: r.command || '',
       args: (r.args || []).map(value => this.redact(r, value)),
       cwd: r.cwd || '',
@@ -207,6 +225,8 @@ export class McpConnections extends EventEmitter {
     ])
       if (field in input)
         next[field] = text(input[field], field, field === 'url' ? 4000 : 2000).trim();
+    // The form sends back the shown address when the owner did not change it.
+    if (current.url && next.url === shownUrl(current.url)) next.url = current.url;
     if (!next.name || next.name.length > 80)
       throw new Error('Connection name must contain 1–80 characters');
     if (!transports.has(next.transport) || !authTypes.has(next.authType))
@@ -271,10 +291,7 @@ export class McpConnections extends EventEmitter {
         );
       next.url = '';
     } else {
-      const url = safeUrl(next.url);
-      if (url.search)
-        throw new Error('Put MCP credentials in authentication settings, not URL query parameters');
-      next.url = url.href;
+      next.url = safeUrl(next.url).href;
       if (next.authType === 'oauth') safeUrl(next.url, { oauth: true });
       if (
         ['bearer', 'header'].includes(next.authType) &&
@@ -699,7 +716,7 @@ export class McpConnections extends EventEmitter {
     let timer;
     try {
       const client = (session.client = new Client(
-        { name: 'stellarcortex', version: '0.1.4' },
+        { name: 'stellarcortex', version: '0.1.5' },
         {
           capabilities: {},
           versionNegotiation: {

@@ -4,11 +4,9 @@ import {
   nonSecretFields,
   commandArguments,
   oauthAuthorizationUrl,
-  selectedServices,
   mcpConnectionDraft,
   mcpConnectionPayload,
   safeMcpConnection,
-  safeGoogleStatus,
 } from '../public/connection-hub.js';
 import { AppsHub } from '../public/apps-hub.js';
 
@@ -66,15 +64,6 @@ test('OAuth navigation permits HTTPS and loopback development URLs only', () => 
     'not a url',
   ])
     assert.equal(oauthAuthorizationUrl(value), null);
-});
-test('Google service selection preserves only supported service IDs', () => {
-  assert.deepEqual(
-    selectedServices(
-      ['gmail', 'calendar', 'gmail', 'unknown'],
-      [{ id: 'gmail' }, { id: 'calendar' }],
-    ),
-    ['gmail', 'calendar'],
-  );
 });
 test('MCP public metadata and drafts never cache token, OAuth secret, or environment values', () => {
   const record = {
@@ -163,27 +152,6 @@ test('MCP payload separates transports and preserves blank credentials unless re
     /environment-object/,
   );
 });
-test('Google public state retains verified connection state and excludes returned credentials', () => {
-  const safe = safeGoogleStatus({
-    clientId: 'public-id',
-    clientSecret: 'private',
-    tokens: { access_token: 'secret' },
-    accessToken: 'secret',
-    hasClientSecret: true,
-    configured: true,
-    connected: false,
-    services: ['gmail'],
-    readOnly: true,
-    account: { email: 'me@example.test', token: 'secret' },
-  });
-  assert.equal(safe.connected, false);
-  assert.equal(safe.configured, true);
-  assert.equal(safe.hasClientSecret, true);
-  assert.equal(safe.clientId, 'public-id');
-  assert.deepEqual(safe.account, { email: 'me@example.test' });
-  assert.equal(JSON.stringify(safe).includes('private'), false);
-  assert.equal(JSON.stringify(safe).includes('secret'), false);
-});
 test('loading and refreshing the hub never connects saved servers or starts OAuth', async () => {
   const original = globalThis.window;
   globalThis.window = { addEventListener() {} };
@@ -192,19 +160,17 @@ test('loading and refreshing the hub never connects saved servers or starts OAut
       hub = new AppsHub({
         api: async (url, data) => {
           requests.push({ url, data });
-          return url === '/api/mcp/connections'
-            ? {
-                connections: [
-                  {
-                    id: 'mcp-1',
-                    name: 'Saved',
-                    enabled: true,
-                    status: 'disconnected',
-                    hasToken: true,
-                  },
-                ],
-              }
-            : { configured: true, connected: false, clientId: 'public', services: ['gmail'] };
+          return {
+            connections: [
+              {
+                id: 'mcp-1',
+                name: 'Saved',
+                enabled: true,
+                status: 'disconnected',
+                hasToken: true,
+              },
+            ],
+          };
         },
         tr: (_, en) => en,
         icon: () => '',
@@ -214,13 +180,12 @@ test('loading and refreshing the hub never connects saved servers or starts OAut
       });
     await hub.load();
     await hub.load();
-    assert.equal(requests.length, 4);
+    assert.equal(requests.length, 2);
     assert.equal(
       requests.every(request => request.data === undefined),
       true,
     );
     assert.equal(hub.connections[0].status, 'disconnected');
-    assert.equal(hub.google.connected, false);
     assert.equal(hub.authorization.size, 0);
     hub.mcpStale = true;
     assert.match(
@@ -256,9 +221,7 @@ test('explicit MCP connect retains a safe OAuth link but does not invent a conne
             connection: record,
             authorizationUrl: 'https://auth.example.test/authorize?state=opaque',
           };
-        return url === '/api/mcp/connections'
-          ? { connections: [record] }
-          : { configured: false, connected: false };
+        return { connections: [record] };
       },
       tr: (_, en) => en,
       icon: () => '',

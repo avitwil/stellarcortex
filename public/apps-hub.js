@@ -1,15 +1,12 @@
 import { withoutProgramOutput } from './chat-errors.js';
 import {
-  GOOGLE_SERVICES,
   MCP_TRANSPORTS,
   MCP_AUTH_TYPES,
   mcpConnectionDraft,
   mcpConnectionPayload,
   commandArguments,
   oauthAuthorizationUrl,
-  selectedServices,
   safeMcpConnection,
-  safeGoogleStatus,
 } from './connection-hub.js';
 
 const escape = value =>
@@ -23,15 +20,11 @@ export class AppsHub {
   constructor({ api, tr, modal, toast, icon, isVisible }) {
     Object.assign(this, { api, tr, modal, toast, icon, isVisible });
     this.connections = [];
-    this.google = null;
     this.loaded = false;
     this.loading = false;
     this.error = '';
     this.busy = new Set();
     this.authorization = new Map();
-    this.message = '';
-    this.googleDraft = null;
-    this.googleDirty = false;
     window.addEventListener('focus', () => {
       if (this.isVisible() || this.authorization.size) this.load();
     });
@@ -55,40 +48,19 @@ export class AppsHub {
     }
     this.loading = true;
     this.render();
-    const results = await Promise.allSettled([
-      this.api('/api/mcp/connections'),
-      this.api('/api/google/status'),
-    ]);
+    const results = await Promise.allSettled([this.api('/api/mcp/connections')]);
     this.mcpStale = results[0].status === 'rejected';
-    this.googleStale = results[1].status === 'rejected';
     if (results[0].status === 'fulfilled') {
       this.connections = Array.isArray(results[0].value.connections)
         ? results[0].value.connections.map(safeMcpConnection)
         : [];
       this.mcpRedirectUri = results[0].value.redirectUri || '';
     }
-    if (results[1].status === 'fulfilled') {
-      this.google = safeGoogleStatus(results[1].value);
-      if (this.google.connected) this.message = '';
-      if (!this.googleDirty)
-        this.googleDraft = {
-          services: selectedServices(
-            this.google.services?.length
-              ? this.google.services
-              : GOOGLE_SERVICES.map(item => item.id),
-            GOOGLE_SERVICES,
-          ),
-          readOnly: this.google.readOnly !== false,
-        };
-    }
     this.error = results
       .filter(result => result.status === 'rejected')
       .map(result => result.reason.message)
       .join(' · ');
-    for (const record of [
-      ...this.connections,
-      ...(this.google ? [{ ...this.google, id: 'google' }] : []),
-    ])
+    for (const record of this.connections)
       if (record.status === 'connected' || record.connected === true)
         this.authorization.delete(record.id);
     this.loading = false;
@@ -131,21 +103,7 @@ export class AppsHub {
   }
   render() {
     if (!this.container || !this.isVisible()) return;
-    const t = this.tr,
-      google = this.google,
-      draft = this.googleDraft || {
-        services: GOOGLE_SERVICES.map(item => item.id),
-        readOnly: true,
-      },
-      googleBusy = this.busy.has('google'),
-      connected = google?.connected === true && !this.googleStale;
-    const googleStatus = this.googleStale
-      ? 'unknown'
-      : connected
-        ? 'connected'
-        : this.authorization.has('google')
-          ? 'authorization-required'
-          : 'disconnected';
+    const t = this.tr;
     this.container.innerHTML =
       '<div class="page app-hub"><div class="page-intro"><div><h1>' +
       t('האפליקציות של הצוות שלך', 'Your team’s apps') +
@@ -169,118 +127,6 @@ export class AppsHub {
           ) +
           '</p>'
         : '') +
-      (this.message ? '<p class="notice" role="status">' + escape(this.message) + '</p>' : '') +
-      '<section class="hub-card hub-google"><div class="hub-card-heading"><span class="hub-google-mark" aria-hidden="true">G</span><div><h2>Google</h2><p>' +
-      t(
-        'דואר, קבצים, מסמכים ויומן במקום אחד.',
-        'Mail, files, documents and calendar in one place.',
-      ) +
-      '</p></div><span class="hub-status ' +
-      googleStatus +
-      '">' +
-      this.label(googleStatus) +
-      '</span></div>' +
-      (google?.email || google?.account?.email
-        ? '<p class="hub-account" dir="auto">' +
-          escape(google.email || google.account.email) +
-          '</p>'
-        : '') +
-      '<fieldset class="hub-services" ' +
-      (googleBusy ? 'disabled' : '') +
-      '><legend>' +
-      t('בחר שירותים לחיבור', 'Choose services to connect') +
-      '</legend>' +
-      GOOGLE_SERVICES.map(
-        service =>
-          '<label><input type="checkbox" data-google-service="' +
-          service.id +
-          '" ' +
-          (draft.services.includes(service.id) ? 'checked' : '') +
-          '><span><strong>' +
-          service.name +
-          '</strong><small>' +
-          t(
-            service.he,
-            {
-              gmail: 'Mail',
-              drive: 'Files',
-              docs: 'Documents',
-              sheets: 'Spreadsheets',
-              calendar: 'Events',
-              contacts: 'People',
-            }[service.id],
-          ) +
-          '</small></span></label>',
-      ).join('') +
-      '</fieldset>' +
-      '<label class="hub-readonly"><input id="hub-google-readonly" type="checkbox" ' +
-      (draft.readOnly ? 'checked' : '') +
-      ' ' +
-      (googleBusy ? 'disabled' : '') +
-      '><span>' +
-      t('גישה לקריאה בלבד', 'Read-only access') +
-      '<small>' +
-      t(
-        'כבה כדי לבקש גם הרשאות כתיבה בשירותים שנבחרו.',
-        'Turn off to request write permissions for the selected services.',
-      ) +
-      '</small></span></label>' +
-      (!google?.configured
-        ? '<p class="hub-description">' +
-          t(
-            'בהתקנה עצמאית מגדירים פעם אחת אפליקציית OAuth משלך ב־Google Cloud. לאחר מכן הכניסה מתבצעת במסך ההרשאות הרגיל של Google.',
-            'A self-hosted installation needs your own Google Cloud OAuth app configured once. Sign-in then uses Google’s regular consent screen.',
-          ) +
-          '</p>'
-        : '') +
-      (this.googleDirty
-        ? '<p class="hub-description">' +
-          t(
-            'שינוי השירותים או הרשאות הכתיבה דורש אישור חיבור מחדש.',
-            'Changing services or write permissions requires renewed consent.',
-          ) +
-          '</p>'
-        : '') +
-      (google?.error
-        ? '<p class="error hub-description">' + escape(this.plainError(google.error)) + '</p>'
-        : '') +
-      '<div class="actions"><button class="primary" id="hub-google-connect" ' +
-      (!google || googleBusy ? 'disabled' : '') +
-      '>' +
-      t(
-        googleBusy
-          ? 'מתחבר…'
-          : !google?.configured
-            ? 'הגדרת Google'
-            : connected && !this.googleDirty
-              ? 'חיבור מחדש'
-              : 'התחברות ל־Google',
-        googleBusy
-          ? 'Connecting…'
-          : !google?.configured
-            ? 'Set up Google'
-            : connected && !this.googleDirty
-              ? 'Reconnect'
-              : 'Connect Google',
-      ) +
-      '</button>' +
-      (connected
-        ? '<button class="secondary" id="hub-google-tools">' +
-          t('הכלים הזמינים', 'Available tools') +
-          (Number.isFinite(google.toolCount) ? ' · ' + google.toolCount : '') +
-          '</button><button class="secondary" id="hub-google-disconnect" ' +
-          (googleBusy ? 'disabled' : '') +
-          '>' +
-          t('ניתוק', 'Disconnect') +
-          '</button>'
-        : '') +
-      '<button class="hub-text-button" id="hub-google-setup" ' +
-      (!google || googleBusy ? 'disabled' : '') +
-      '>' +
-      t('הגדרות OAuth', 'OAuth setup') +
-      '</button></div>' +
-      this.authLink('google') +
-      '</section>' +
       '<div class="hub-section-heading"><div><h2>' +
       t('שרתי MCP', 'MCP servers') +
       '</h2><p>' +
@@ -312,41 +158,6 @@ export class AppsHub {
       void this.load();
     };
     byId('hub-add-server').onclick = () => this.serverForm();
-    byId('hub-google-setup').onclick = () => this.googleSetup();
-    byId('hub-google-connect').onclick = () =>
-      google?.configured ? this.connectGoogle() : this.googleSetup();
-    byId('hub-google-disconnect')?.addEventListener('click', () =>
-      this.perform('google', async () => {
-        await this.api('/api/google/disconnect', {});
-        this.authorization.delete('google');
-        this.googleDirty = false;
-        await this.load();
-      }),
-    );
-    byId('hub-google-tools')?.addEventListener('click', () =>
-      this.inspectTools('google', 'Google'),
-    );
-    this.container.querySelectorAll('[data-google-service]').forEach(
-      field =>
-        (field.onchange = () => {
-          const selected = field.dataset.googleService;
-          this.googleDraft = {
-            ...draft,
-            services: [...this.container.querySelectorAll('[data-google-service]:checked')].map(
-              item => item.dataset.googleService,
-            ),
-          };
-          this.googleDirty = true;
-          this.render();
-          this.container.querySelector('[data-google-service="' + selected + '"]')?.focus();
-        }),
-    );
-    byId('hub-google-readonly').onchange = event => {
-      this.googleDraft = { ...draft, readOnly: event.target.checked };
-      this.googleDirty = true;
-      this.render();
-      byId('hub-google-readonly')?.focus();
-    };
     this.container.querySelectorAll('[data-hub-action]').forEach(
       button =>
         (button.onclick = () => {
@@ -494,105 +305,6 @@ export class AppsHub {
       }
     });
   }
-  async connectGoogle() {
-    if (this.busy.has('google')) return;
-    this.returnResult = '';
-    const draft = this.googleDraft || { services: [], readOnly: true };
-    if (!draft.services.length) {
-      this.toast(this.tr('בחר לפחות שירות אחד.', 'Choose at least one service.'));
-      return;
-    }
-    const popup = this.popup();
-    await this.perform('google', async () => {
-      try {
-        if (this.googleDirty) await this.api('/api/google/config', draft, 'PATCH');
-        const result = await this.api('/api/google/connect', {});
-        this.googleDirty = false;
-        this.authorize('google', result, popup);
-        await this.load();
-      } catch (error) {
-        popup?.close();
-        throw error;
-      }
-    });
-  }
-  googleSetup() {
-    const t = this.tr,
-      g = this.google || {},
-      redirect = g.redirectUri || '';
-    this.modal(
-      t('הגדרת חיבור Google', 'Google connection setup'),
-      '<form id="hub-google-form" autocomplete="off"><p class="hub-description">' +
-        t(
-          'צור פרויקט ב־Google Cloud, הגדר את מסך ההסכמה, הפעל את ה־APIs של השירותים שבחרת וצור OAuth Client מסוג Web application. במצב Testing הוסף את חשבון Google שלך כמשתמש בדיקה.',
-          'Create a Google Cloud project, configure the consent screen, enable the APIs for your selected services, and create a Web application OAuth client. In Testing mode, add your Google account as a test user.',
-        ) +
-        '</p><a class="secondary" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Console ↗</a><label>' +
-        t(
-          'Authorized redirect URI — יש לרשום בדיוק את הכתובת הזאת',
-          'Authorized redirect URI — register this exact address',
-        ) +
-        '</label><code class="hub-redirect" dir="ltr">' +
-        escape(
-          redirect ||
-            t(
-              'הכתובת אינה זמינה. רענן את החיבור לשרת.',
-              'Address unavailable. Refresh the server connection.',
-            ),
-        ) +
-        '</code><label for="hub-google-client">OAuth Client ID</label><input id="hub-google-client" name="clientId" required dir="ltr" value="' +
-        escape(g.clientId || '') +
-        '" autocomplete="off"><label for="hub-google-secret">OAuth Client secret</label><input id="hub-google-secret" name="clientSecret" type="password" data-connection-secret dir="ltr" autocomplete="new-password" placeholder="' +
-        t(
-          g.hasClientSecret ? 'סוד שמור — ריק משאיר אותו ללא שינוי' : 'הדבק את סוד הלקוח',
-          g.hasClientSecret ? 'Secret saved — leave blank to keep it' : 'Paste the client secret',
-        ) +
-        '" ' +
-        (!g.hasClientSecret ? 'required' : '') +
-        '><p class="hub-description">' +
-        t(
-          'הסוד נשמר בשרת StellarCortex בלבד. החלפת Client ID דורשת גם את הסוד המתאים לו.',
-          'The secret is stored only on the StellarCortex server. Changing the Client ID requires its matching secret.',
-        ) +
-        '</p><p class="error" id="hub-google-form-error" role="alert"></p><div class="actions"><button class="primary" ' +
-        (!redirect ? 'disabled' : '') +
-        '>' +
-        t('שמירת ההגדרות', 'Save setup') +
-        '</button></div></form>',
-    );
-    const form = byId('hub-google-form');
-    form.onsubmit = async event => {
-      event.preventDefault();
-      const clientId = form.elements.clientId.value.trim(),
-        secret = form.elements.clientSecret.value.trim();
-      if (g.hasClientSecret && g.clientId !== clientId && !secret) {
-        byId('hub-google-form-error').textContent = t(
-          'הזן את הסוד המתאים ל־Client ID החדש.',
-          'Enter the matching secret for the new Client ID.',
-        );
-        return;
-      }
-      const payload = { clientId, ...this.googleDraft };
-      if (secret) payload.clientSecret = secret;
-      form.elements.clientSecret.value = '';
-      form.querySelector('button').disabled = true;
-      try {
-        await this.api('/api/google/config', payload, 'PATCH');
-        this.googleDirty = false;
-        if (form.isConnected) byId('modal').close();
-        this.message = t(
-          'ההגדרות נשמרו. לחץ על התחברות ל־Google כדי לאשר גישה.',
-          'Setup saved. Select Connect Google to authorize access.',
-        );
-        await this.load();
-      } catch (error) {
-        if (form.isConnected)
-          form.querySelector('#hub-google-form-error').textContent = error.message;
-      } finally {
-        if (form.isConnected) form.querySelector('button').disabled = false;
-      }
-    };
-  }
   async inspectTools(id, name) {
     this.modal(
       this.tr('כלים של ', 'Tools from ') + name,
@@ -605,11 +317,7 @@ export class AppsHub {
       loadingNode = body.firstElementChild;
     const current = () => byId('modal').open && body.firstElementChild === loadingNode;
     try {
-      const result = await this.api(
-        id === 'google'
-          ? '/api/google/tools'
-          : '/api/mcp/connections/' + encodeURIComponent(id) + '/tools',
-      );
+      const result = await this.api('/api/mcp/connections/' + encodeURIComponent(id) + '/tools');
       if (!current()) return;
       body.innerHTML =
         '<p class="hub-description">' +

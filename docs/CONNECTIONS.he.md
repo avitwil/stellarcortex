@@ -26,24 +26,14 @@
 
 ## Google
 
-המחבר המובנה מציע כלים עבור Gmail, Drive, Docs, Sheets, Calendar ו־Contacts, דרך OAuth הרשמי ו־Google APIs. הוא משתמש בשכבת הכלים העצמאית של StellarCortex. אפשר לחבר בנוסף שרת MCP חיצוני של Google דרך מסך MCP, אם מעדיפים ספק אחר או צריכים כלים נוספים.
+כדי להשתמש ב־Gmail,‏ Drive,‏ Calendar ובשירותי Google אחרים, חברו את Google דרך שירות MCP כמו Composio, עם **הוספת שרת MCP** שלמעלה. כתובת שרת יכולה לכלול מחרוזת שאילתה, כמו `user_id` של Composio. היא נשמרת מוצפנת כמו מפתח, והיישום מציג את הכתובת בלעדיה.
 
-בהתקנה עצמית נדרשת פעם אחת אפליקציית OAuth של Google:
-
-1. ב־[Google Cloud Console](https://console.cloud.google.com/) בחר או צור פרויקט, והפעל את APIs של השירותים שבחרת.
-2. הגדר את מסך ההסכמה. באפליקציית בדיקה הוסף את חשבון Google שלך לרשימת משתמשי הבדיקה.
-3. צור OAuth Client מסוג **Web application**. רשום ב־Authorized redirect URIs את הכתובת המדויקת שמוצגת במסך Google ב־StellarCortex. עבור שרת מרוחק יש להגדיר `STELLARCORTEX_PUBLIC_URL` עם HTTPS. ל־localhost מותר HTTP.
-4. שמור את Client ID ואת Client secret במסך ההגדרה. בחר אילו שירותים לחבר ואם נדרשת כתיבה.
-5. לחץ **התחברות לגוגל**, בחר חשבון ואשר בגוגל את ההרשאות המוצגות. לאחר החזרה ליישום רענן את החיבורים.
-
-ברירת המחדל היא קריאה בלבד. הרשאות כתיבה מאפשרות את פעולות הכתיבה שהמחבר מממש; שליחה ויצירה דורשות אישור בממשק כאשר הבוט מבקש לבצע אותן. שינוי שירותים או הרשאות עשוי לדרוש התחברות מחדש. התפריט מציג את הכלים הנתמכים בפועל; הוא אינו ממשק לכל endpoint שקיים ב־Google.
-
-לשיתוף יישום OAuth עם משתמשים נוספים עשויות לחול דרישות בדיקה ואימות של Google, במיוחד בהרשאות Gmail ו־Drive רחבות. StellarCortex אינו מספק Client ID ציבורי מאומת ואינו משתמש בזהות OAuth של Codex או Claude. [הדרישות הרשמיות של Google](https://developers.google.com/identity/protocols/oauth2/web-server).
+בגרסאות קודמות היה מחבר Google מובנה. בשדרוג, היישום מנסה לבטל את הגישה שלו ב־Google, ושוב בכל הפעלה עד ש־Google מאשרת, ומוחק את הלקוח וה־tokens של Google שנשמרו, גם מגיבויי העדכונים. בדקו ב־[myaccount.google.com/permissions](https://myaccount.google.com/permissions) שאין עוד ל־StellarCortex גישה, ומחקו את לקוח ה־OAuth שיצרתם ב־Google Cloud Console.
 
 ## שימוש בכלים ומפתחות
 
-בקשה לבוט כגון “חפש ב־Drive את המסמך...” מפנה אותו לרשימת החיבורים והכלים הזמינים. תוצאות מכלים חיצוניים הן מידע, ואינן הוראות שמרחיבות את הרשאות הבוט. קריאות לשרתי MCP חיצוניים ממתינות לאישור שמציג את השרת, הכלי והארגומנטים. כלים לקריאה בלבד במחבר Google המובנה יכולים לפעול במסגרת הבקשה; כתיבה דורשת אישור. ניתוק חיבור או שינוי הגדרותיו מבטלים אישור ישן שטרם בוצע.
+בקשה לבוט כגון “חפש ב־Drive את המסמך...” מפנה אותו לרשימת החיבורים והכלים הזמינים. תוצאות מכלים חיצוניים הן מידע, ואינן הוראות שמרחיבות את הרשאות הבוט. קריאות לשרתי MCP חיצוניים ממתינות לאישור שמציג את השרת, הכלי והארגומנטים. ניתוק חיבור או שינוי הגדרותיו מבטלים אישור ישן שטרם בוצע.
 
 מפתחות, סודות OAuth ו־tokens נשמרים מוצפנים בתיקיית הנתונים הפרטית של היישום, ולא בתיקיית העבודה של הבוטים. הם אינם מוחזרים לרשימות החיבורים, לייצוא נתוני השיחות או לחבילת ההתקנה. גיבוי לשחזור חייב לשמור גם את קובץ ההצפנה; ההצפנה אינה מגינה מפני שליטה במשתמש מערכת ההפעלה שמריץ את השרת.
 
-מקורות: [MCP client SDK](https://github.com/modelcontextprotocol/typescript-sdk), [MCP authorization](https://modelcontextprotocol.io/specification/latest/basic/authorization), [Google OAuth web applications](https://developers.google.com/identity/protocols/oauth2/web-server).
+מקורות: [MCP client SDK](https://github.com/modelcontextprotocol/typescript-sdk), [MCP authorization](https://modelcontextprotocol.io/specification/latest/basic/authorization).

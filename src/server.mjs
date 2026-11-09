@@ -33,7 +33,7 @@ import { HttpProvider } from './http-provider.mjs';
 import { ProviderConnections } from './provider-connections.mjs';
 import { createVoiceSession, VOICE_MODEL, VOICE_NAME } from './voice.mjs';
 import { McpConnections } from './mcp-connections.mjs';
-import { GoogleConnector } from './google-connector.mjs';
+import { removeGoogleConnection, revokeRemovedGoogle } from './google-removal.mjs';
 import { ConnectionHub } from './connection-hub.mjs';
 import { createConnectionRoutes } from './connection-routes.mjs';
 import { Engine } from './engine.mjs';
@@ -113,7 +113,7 @@ export async function createApp({
   bootProbe = false,
   voiceSessionFactory = createVoiceSession,
   mcpService,
-  googleService,
+  googleRevoke,
   softwareUpdates = new SoftwareUpdates({ root: ROOT, manager: managedUpdateClient() }),
 } = {}) {
   let guestCodex = null;
@@ -129,9 +129,10 @@ export async function createApp({
   if (guestExecution?.claudeExecutable)
     claudeRuntime.command = { bin: guestExecution.claudeExecutable, prefix: [] };
   const releaseLock = acquireLock(path.resolve(dataDir));
-  let store, connections, mcp, google, server, unixServer;
+  let store, connections, mcp, server, unixServer;
   try {
     store = new Store(path.resolve(dataDir));
+    removeGoogleConnection(store);
     connections = new ProviderConnections(store.dir);
     mcp =
       mcpService ||
@@ -140,12 +141,12 @@ export async function createApp({
         callbackUrl: () =>
           `${process.env.STELLARCORTEX_PUBLIC_URL?.replace(/\/+$/, '') || `http://127.0.0.1:${server?.address()?.port || port}`}/api/mcp/oauth/callback`,
       });
-    google = googleService || new GoogleConnector({ dataDir: store.dir });
   } catch (e) {
     releaseLock();
     throw e;
   }
-  const connectionHub = new ConnectionHub({ mcp, google });
+  void revokeRemovedGoogle(store.dir, googleRevoke);
+  const connectionHub = new ConnectionHub({ mcp });
   const apiProviders = Object.fromEntries(
     connections.ids().map(provider => [
       provider,
@@ -260,14 +261,12 @@ export async function createApp({
   }
   const connectionRoutes = createConnectionRoutes({
     mcp,
-    google,
     hub: connectionHub,
     json,
     body,
     publish,
   });
   mcp.on?.('change', () => publish('connections', {}));
-  google.on?.('change', () => publish('connections', {}));
   const providerNames = {
     codex: 'Codex',
     claude: 'Claude',
@@ -757,9 +756,16 @@ export async function createApp({
           }
           return json(res, 200, { result: result ?? null });
         }
-        if (p === '/api/state')
+        if (p === '/api/state') {
+          // A notice goes to the first page that loads the state and is then marked seen, so a reload does not repeat it.
+          const notices = store.data.notices || [];
+          if (notices.length) {
+            store.data.notices = [];
+            store.save();
+          }
           return json(res, 200, {
             ...store.data,
+            notices,
             desktopProvider: desktopProvider?.enabled
               ? {
                   enabled: true,
@@ -793,6 +799,7 @@ export async function createApp({
             })),
             platform: process.platform,
           });
+        }
         if (p === '/api/providers' && req.method === 'GET')
           return json(res, 200, {
             providers: await Promise.all(
@@ -1399,7 +1406,6 @@ export async function createApp({
         () => kanban.close(),
         () => engine.close(),
         () => mcp.close?.(),
-        () => google.close?.(),
         () => (unixServer ? new Promise(resolve => unixServer.close(resolve)) : Promise.resolve()),
         () => new Promise(resolve => server.close(resolve)),
       ]) {
@@ -1425,7 +1431,6 @@ export async function createApp({
     browser,
     desktop,
     mcp,
-    google,
     connectionHub,
     accessKey,
     softwareUpdates,

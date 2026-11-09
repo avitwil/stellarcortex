@@ -20,7 +20,7 @@ The `scripts/check-*.mjs` and `scripts/*-check.mjs` files are manual checks. Mos
 - **Engine and bots:** streaming, per-bot serialization, concurrency, team creation, asynchronous hand-offs and result return, duplicate and cycle prevention, group routing, deletion and restore, one-time approvals.
 - **Providers:** Codex app-server, the official Claude Code CLI adapter (streaming, MCP tool and image results, denied native actions, process cleanup), exact Claude model IDs and effort levels, `/usage` parsing, per-bot model, effort and speed, provider switching, and refusal of silent API billing.
 - **API and local models:** Chat Completions, Responses and Anthropic Messages streaming, tool round trips, session resume, credential isolation, origin-bound model catalogs and no redirects.
-- **Connections:** the MCP client over Streamable HTTP, SSE and stdio, OAuth with browser-bound state, encrypted secret storage, credential redaction, and the Google connector's typed tools against mocked official endpoints.
+- **Connections:** the MCP client over Streamable HTTP, SSE and stdio, OAuth with browser-bound state, encrypted secret storage and credential redaction.
 - **Computer control:** takeover and hand-back, input ordering, Unicode and shortcut handling, coordinate scaling, stale screenshots, fullscreen fallbacks, separate bot screens, the QEMU/KVM desktop provider, broker, guest channel, effect journal and teaching flow.
 - **Permissions and updates:** Claude permission modes, signed release checks, the one-line install with a fake GitHub, the release tool, owner confirmation, release staging, backup, health check and rollback.
 - **Voice:** WebRTC negotiation, transcription settings, cancellation, microphone cleanup and call-scoped replies (mocked).
@@ -40,7 +40,7 @@ The `scripts/check-*.mjs` and `scripts/*-check.mjs` files are manual checks. Mos
 - A real signed GitHub release, and a service install running under the update supervisor on Linux.
 - The "Ways to run it" steps in the README, end to end: the VPS example (new user, NodeSource, Tailscale, `tailscale serve`), the host check commands, the LAN install with its `ufw` rule, and changing settings on a running install. The server's listen address and `Host` check were run with `STELLARCORTEX_BIND` and `STELLARCORTEX_PUBLIC_URL` outside a service.
 - **Docker build and Docker deployment.** The Dockerfile and Compose file are provided but have not been tested end to end.
-- Real Google consent and external MCP OAuth with a user account; paid API inference; every listed local engine; microphone recognition and audible playback end to end.
+- External MCP OAuth with a user account; paid API inference; every listed local engine; microphone recognition and audible playback end to end.
 - QEMU virtual computers since the per-bot modes, host control on Linux X11, the Wayland status, locked or pre-login screens, Linux systemd activation and a remote TLS proxy.
 - Fully model-driven replay of skills recorded through desktop teaching.
 - Password pass-through on real sites: real logins, real two-step forms and real site scripts. A local fixture on real Chrome covers the flow, with a canary search of the data directory and output.

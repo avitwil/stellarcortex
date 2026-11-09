@@ -10,10 +10,9 @@ const ownerFor = value =>
   typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)
     ? createHash('sha256').update(value).digest('hex')
     : null;
-export function createConnectionRoutes({ mcp, google, hub, json, body, publish }) {
-  const callbackPath = kind =>
-    kind === 'google' ? '/api/google/oauth/callback' : '/api/mcp/oauth/callback';
-  const ownerCookiePath = kind => (kind === 'google' ? '/api/google' : '/api/mcp');
+export function createConnectionRoutes({ mcp, hub, json, body, publish }) {
+  const callbackPath = () => '/api/mcp/oauth/callback';
+  const ownerCookiePath = () => '/api/mcp';
   const cookieName = kind => `stellarcortex_${kind}_oauth`;
   function callbackUrl(req, kind) {
     const origin = process.env.STELLARCORTEX_PUBLIC_URL
@@ -51,12 +50,7 @@ export function createConnectionRoutes({ mcp, google, hub, json, body, publish }
     // is SameSite=Strict, so the short-lived Lax cookie binds the SDK state to the
     // initiating browser without relaxing the application's main session policy.
     async callback(req, res, url) {
-      const kind =
-        url.pathname === callbackPath('google')
-          ? 'google'
-          : url.pathname === callbackPath('mcp')
-            ? 'mcp'
-            : null;
+      const kind = url.pathname === callbackPath('mcp') ? 'mcp' : null;
       if (!kind) return false;
       if (req.method !== 'GET') {
         json(res, 405, { error: 'Method not allowed' });
@@ -78,8 +72,7 @@ export function createConnectionRoutes({ mcp, google, hub, json, body, publish }
             url.searchParams.get(key) || undefined,
           ]),
         );
-        if (kind === 'google') await google.completeAuth(input, { owner });
-        else await mcp.completeAuth(input, { owner });
+        await mcp.completeAuth(input, { owner });
       } catch {
         result = 'error';
       }
@@ -135,37 +128,6 @@ export function createConnectionRoutes({ mcp, google, hub, json, body, publish }
         } else if (action === 'tools' && req.method === 'GET')
           json(res, 200, await mcp.listTools(id));
         else json(res, 405, { error: 'Method not allowed' });
-        return true;
-      }
-      if (p === '/api/google/status' && req.method === 'GET') {
-        json(res, 200, { ...google.status(), redirectUri: callbackUrl(req, 'google') });
-        return true;
-      }
-      if (p === '/api/google/config' && req.method === 'PATCH') {
-        const result = await google.configure(await body(req));
-        changed();
-        json(res, 200, { ...result, redirectUri: callbackUrl(req, 'google') });
-        return true;
-      }
-      if (p === '/api/google/connect' && req.method === 'POST') {
-        const owner = startOwner(req, res, 'google');
-        json(
-          res,
-          200,
-          checkAuthorization(
-            await google.startAuth({ owner, redirectUri: callbackUrl(req, 'google') }),
-          ),
-        );
-        return true;
-      }
-      if (p === '/api/google/disconnect' && req.method === 'POST') {
-        const result = await google.disconnect();
-        changed();
-        json(res, 200, result || { ok: true });
-        return true;
-      }
-      if (p === '/api/google/tools' && req.method === 'GET') {
-        json(res, 200, await google.listTools());
         return true;
       }
       return false;

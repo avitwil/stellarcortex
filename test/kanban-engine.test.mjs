@@ -502,24 +502,16 @@ test('assignment explicitly selects existing agents and never starts work by its
   k.assignCard(c.id, []);
   assert.equal(c.assignmentMode, 'stage');
 });
-test('automatic email eligibility inspects only existing local capability metadata and grants nothing', t => {
+test('automatic email and calendar routing stays off with no built-in connector and grants nothing', t => {
   const f = fixture(t),
     bot = f.store.data.bots[0],
     executor = createKanbanEngineExecutor({ engine: f.engine, enabled: true });
-  let reads = 0;
-  f.engine.connections = {
-    google: {
-      permittedTools: () => {
-        reads++;
-        return [];
-      },
-    },
-  };
-  assert.equal(executor.routingEligibility(bot, 'email').allowed, false);
-  assert.equal(f.codex.calls.length, 0);
-  f.engine.connections.google.permittedTools = () => [{ name: 'gmail_get_message' }];
-  assert.equal(executor.routingEligibility(bot, 'email').allowed, true);
-  assert.equal(reads, 1);
+  for (const role of ['email', 'calendar']) {
+    const result = executor.routingEligibility(bot, role);
+    assert.equal(result.allowed, false);
+    assert.match(result.reason, /Choose an agent manually/);
+  }
+  assert.equal(executor.routingEligibility(bot, 'general').allowed, true);
   assert.equal(f.codex.calls.length, 0);
 });
 test('a tainted stage unit taints later units and later runs of the card, in other bots too', async t => {

@@ -28,7 +28,6 @@ function fixture(t) {
         connected: true,
         secret: 'never-model',
       },
-      google: { id: 'google', name: 'Google', kind: 'google', revision: 'one', connected: true },
     },
     calls = [];
   const manager = {
@@ -49,7 +48,6 @@ function fixture(t) {
         { name: 'write', description: 'Update a resource', inputSchema: { type: 'object' } },
       ],
     }),
-    requiresApproval: async (_id, name) => name !== 'read',
     callTool: async (id, name, args, options) => {
       calls.push({ id, name, args, options });
       return {
@@ -93,11 +91,11 @@ const approve = async (f, allow) => {
 test('all model providers receive a fixed connector discovery tool without exposing credentials or trusting MCP annotations', async t => {
   const f = fixture(t);
   assert.ok(TOOLS.some(tool => tool.name === 'stellarcortex_connections'));
-  assert.match(TOOLS_VERSION, /v13-computer-modes-secret$/);
+  assert.match(TOOLS_VERSION, /v14-connection-approval$/);
   const list = JSON.parse(
     (await f.engine.tool(f.job, 'stellarcortex_connections', { action: 'list' }))[0].text,
   );
-  assert.equal(list.connections.length, 2);
+  assert.equal(list.connections.length, 1);
   assert.equal(JSON.stringify(list).includes('never-model'), false);
   const schemas = JSON.parse(
     (
@@ -133,7 +131,7 @@ test('all model providers receive a fixed connector discovery tool without expos
   assert.ok(f.calls.every(call => call.options.expectedRevision === 'one'));
   assert.equal(f.store.data.approvals.length, 6);
 });
-test('exact arguments are snapshotted, denial performs no action, and trusted built-in reads alone can skip approval', async t => {
+test('exact arguments are snapshotted, denial performs no action, and a read-only tool still needs approval', async t => {
   const f = fixture(t),
     args = { text: 'Approved text' },
     pending = f.engine.tool(f.job, 'stellarcortex_connections', {
@@ -156,21 +154,15 @@ test('exact arguments are snapshotted, denial performs no action, and trusted bu
   await approve(f, false);
   await rejection;
   assert.equal(f.calls.length, 1);
-  await f.engine.tool(f.job, 'stellarcortex_connections', {
+  const read = f.engine.tool(f.job, 'stellarcortex_connections', {
     action: 'call',
-    connectionId: 'google',
+    connectionId: 'mcp',
     toolName: 'read',
   });
-  assert.equal(f.store.data.approvals.length, 2);
-  assert.equal(f.calls.length, 2);
-  const write = f.engine.tool(f.job, 'stellarcortex_connections', {
-    action: 'call',
-    connectionId: 'google',
-    toolName: 'write',
-  });
   await approve(f, true);
-  await write;
+  await read;
   assert.equal(f.store.data.approvals.length, 3);
+  assert.equal(f.calls.length, 2);
 });
 test('changing connection revision while waiting invalidates approval before execution', async t => {
   const f = fixture(t),

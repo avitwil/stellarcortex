@@ -26,24 +26,14 @@ Different MCP servers offer different tools. Support here does not promise compa
 
 ## Google
 
-The built-in connector offers tools for Gmail, Drive, Docs, Sheets, Calendar and Contacts, through official OAuth and Google APIs. It uses StellarCortex's own tool layer. You can also connect an external Google MCP server from the MCP screen, if you prefer another provider or need more tools.
+To use Gmail, Drive, Calendar and other Google services, connect Google through an MCP service such as Composio, with **Add MCP server** above. A server address may carry a query string, such as Composio's `user_id`. It is stored encrypted like a key, and the app shows the address without it.
 
-A self-hosted install needs a Google OAuth app, once:
-
-1. In [Google Cloud Console](https://console.cloud.google.com/), choose or create a project, and turn on the APIs of the services you chose.
-2. Set up the consent screen. For a test app, add your Google account to the test users.
-3. Create an OAuth client of type **Web application**. Under Authorized redirect URIs, enter the exact address shown on the Google screen in StellarCortex. For a remote server, set `STELLARCORTEX_PUBLIC_URL` with HTTPS. Localhost may use HTTP.
-4. Save the Client ID and Client secret on the setup screen. Choose which services to connect and whether writing is needed.
-5. Press **Connect to Google**, choose an account and approve the permissions shown. After returning to the app, refresh the connections.
-
-The default is read-only. Write permissions allow the write actions the connector implements; sending and creating need approval in the interface when a bot asks to do them. Changing services or permissions may need a new sign-in. The menu shows the tools really supported; it is not an interface to every Google endpoint.
-
-Sharing an OAuth app with more users may bring Google's review and verification requirements, especially for broad Gmail and Drive permissions. StellarCortex does not provide a verified public Client ID, and does not use the OAuth identity of Codex or Claude. [Google's official requirements](https://developers.google.com/identity/protocols/oauth2/web-server).
+Older versions had a built-in Google connector. On upgrade, the app tries to revoke its Google access, again at each start until Google confirms, and deletes the saved Google client and tokens, also from update backups. Check at [myaccount.google.com/permissions](https://myaccount.google.com/permissions) that StellarCortex no longer has access, and delete the OAuth client you made in Google Cloud Console.
 
 ## Using tools, and keys
 
-A request to a bot such as "find the document in Drive" points it to the list of connections and available tools. Results from external tools are data, and are not instructions that widen the bot's permissions. Calls to external MCP servers wait for an approval that shows the server, the tool and the arguments. Read-only tools in the built-in Google connector can run as part of the request; writing needs approval. Disconnecting a connection or changing its settings cancels an old approval that has not run.
+A request to a bot such as "find the document in Drive" points it to the list of connections and available tools. Results from external tools are data, and are not instructions that widen the bot's permissions. Calls to external MCP servers wait for an approval that shows the server, the tool and the arguments. Disconnecting a connection or changing its settings cancels an old approval that has not run.
 
 Keys, OAuth secrets and tokens are stored encrypted in the app's private data folder, not in the bots' working folder. They are not returned to connection lists, chat data exports or the install package. A backup for restoring must also keep the encryption file; encryption does not protect against control of the operating-system user who runs the server.
 
-Sources: [MCP client SDK](https://github.com/modelcontextprotocol/typescript-sdk), [MCP authorization](https://modelcontextprotocol.io/specification/latest/basic/authorization), [Google OAuth web applications](https://developers.google.com/identity/protocols/oauth2/web-server).
+Sources: [MCP client SDK](https://github.com/modelcontextprotocol/typescript-sdk), [MCP authorization](https://modelcontextprotocol.io/specification/latest/basic/authorization).

@@ -6,7 +6,7 @@
 
 **A self-hosted, open-source workspace of AI teammates for Linux, inspired by Grok Bot.**
 
-Version **0.1.4** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
+Version **0.1.5** · [MIT License](LICENSE) · [github.com/avitwil/stellarcortex](https://github.com/avitwil/stellarcortex) · Website: [stellarcortex.avitwil.io](https://stellarcortex.avitwil.io)
 
 Windows app: [StellarCortex Desktop](https://github.com/avitwil/stellarcortex-desktop) · [stellarcortex.avitwil.io/desktop.html](https://stellarcortex.avitwil.io/desktop.html)
 
@@ -41,7 +41,7 @@ General and per-project boards, with task and idea stages, bot routing, approval
 
 ### Apps and tools
 
-**Connect apps** adds MCP servers and the Google connector (Gmail, Drive, Docs, Sheets, Calendar and Contacts). These connections are separate from your model provider. See [Tools and voice](#tools).
+**Connect apps** adds MCP servers; connect Google through an MCP service such as Composio. These connections are separate from your model provider. See [Tools and voice](#tools).
 
 ![The Connect apps page](docs/images/apps-en.webp)
 
@@ -334,7 +334,7 @@ Choose each bot's model, effort and speed in the picker next to the message box;
 <a id="tools"></a>
 ## Tools and voice
 
-**Connect apps** adds MCP servers over Streamable HTTP, SSE or a locally installed stdio program, with no authentication, a key or header, or OAuth. HTTP and SSE servers can be on loopback, your LAN or a tailnet; cloud metadata addresses are always refused. The Google connector covers Gmail, Drive, Docs, Sheets, Calendar and Contacts; it needs your own Google OAuth client. See the [connections guide](docs/CONNECTIONS.md).
+**Connect apps** adds MCP servers over Streamable HTTP, SSE or a locally installed stdio program, with no authentication, a key or header, or OAuth. HTTP and SSE servers can be on loopback, your LAN or a tailnet; cloud metadata addresses are always refused. Connect Google through an MCP service such as Composio. See the [connections guide](docs/CONNECTIONS.md).
 
 Set the language in **Settings → General → Language**. The call button starts a voice conversation with the selected bot, using the browser's speech recognition and synthesis or OpenAI Realtime (API key, billed separately). It needs microphone permission over localhost or HTTPS. See the [voice guide](docs/VOICE.md).
 
@@ -421,7 +421,7 @@ If the button is not available, as in Docker, see [Recovery](docs/RECOVERY.md).
 | [Permission modes and updates](docs/UPDATES.md) | English |
 | [Feature map](docs/PARITY.md) · [Testing and validation](docs/VALIDATION.md) · [Roadmap](docs/ROADMAP.md) · [Visual system](docs/DESIGN.md) | English |
 | [Third-party notices and licenses](THIRD_PARTY_NOTICES.md) | English |
-| [Models, effort and speed](docs/MODELS.md) · [Claude Code and usage](docs/CLAUDE.md) · [API and local models](docs/API-LOCAL.md) · [MCP and Google](docs/CONNECTIONS.md) · [Voice](docs/VOICE.md) | English, Hebrew |
+| [Models, effort and speed](docs/MODELS.md) · [Claude Code and usage](docs/CLAUDE.md) · [API and local models](docs/API-LOCAL.md) · [MCP connections](docs/CONNECTIONS.md) · [Voice](docs/VOICE.md) | English, Hebrew |
 
 <a id="development"></a>
 ## Development
@@ -441,6 +441,8 @@ Some tests need Linux. See [Testing and validation](docs/VALIDATION.md). To publ
 [MIT](LICENSE). The software is provided "as is", without warranty of any kind. StellarCortex is an independent project and is not affiliated with or endorsed by xAI, OpenAI, Anthropic or any other provider. Bundled files, dependencies and downloaded software keep their own licenses and terms: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Some are not open source, and they stay installed from their own source on your machine. Check [Provider terms](#provider-terms) before you connect a service.
 
 ## Version history
+
+**0.1.5** — The built-in Google connector is removed. On update, Google access is revoked and the stored tokens and backups are deleted. To use Google again, connect it through an MCP service such as Composio. MCP connection URLs with query strings are now supported and treated as secrets.
 
 **0.1.4** — Fewer false "external content" blocks: a failed tool call, or the built-in Google tool list, no longer blocks a chat. A blocked chat now has "Continue in a new conversation", which starts clean and re-sends your last message. The block notice now names the real actions.
 

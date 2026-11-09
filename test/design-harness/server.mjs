@@ -104,14 +104,6 @@ http
     if (p === '/api/desktop/status') return json(res, { available: false });
     if (p === '/api/kanban' && req.method === 'GET') return json(res, fixtureKanban(settings));
     if (p === '/api/mcp/connections') return json(res, { connections: fixtureMcp() });
-    if (p === '/api/google/status')
-      return json(res, {
-        configured: false,
-        connected: false,
-        status: 'disconnected',
-        services: ['gmail', 'drive', 'docs', 'calendar'],
-        readOnly: true,
-      });
     if (p === '/api/software-update') return json(res, fixtureUpdate());
     if (p === '/api/claude-permissions')
       return json(res, { defaultMode: 'manual', effectiveMode: 'manual', bots: [] });

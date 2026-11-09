@@ -533,3 +533,36 @@ test('MCP OAuth supports manually registered clients and rejects stale callback 
   );
   assert.equal(JSON.stringify(f.manager.list()).includes('private-client-secret'), false);
 });
+test('a Composio-shaped URL with a query string connects, and its query never leaves the vault', async t => {
+  const f = await fixture(t, simple),
+    user = 'pg-test-user-7f3a9c41',
+    route = '/v3/mcp/0f2b9e4c-1111-2222-3333-444455556666/mcp',
+    created = f.manager.create({
+      name: 'Composio Google',
+      url: `${f.base}${route}?user_id=${user}&connected_account_ids=ca_8x2LmQ`,
+      authType: 'header',
+      headerName: 'X-API-Key',
+      token: 'composio-test-key',
+    });
+  assert.equal(created.url, `${f.base}${route}?…`);
+  for (const value of [f.manager.list(), f.manager.getPublic(created.id)])
+    assert.doesNotMatch(JSON.stringify(value), /user_id|pg-test-user|ca_8x2LmQ/);
+  const vault = fs
+    .readdirSync(path.join(f.dir, 'private'))
+    .map(name => fs.readFileSync(path.join(f.dir, 'private', name)).toString('latin1'))
+    .join('');
+  assert.equal(vault.includes(user), false);
+  assert.equal((await f.manager.connect(created.id)).connection.connected, true);
+  assert.ok(
+    f.requests.some(r => r.url === `${route}?user_id=${user}&connected_account_ids=ca_8x2LmQ`),
+  );
+  const record = f.manager.record(created.id);
+  assert.doesNotMatch(
+    f.manager.redact(record, `fetch failed for ${record.url} (user ${user})`),
+    /user_id|pg-test-user/,
+  );
+  // Saving the form unchanged sends the shown address back; the full one is kept.
+  const kept = await f.manager.update(created.id, { name: 'Composio', url: created.url });
+  assert.equal(kept.url, created.url);
+  assert.equal(f.manager.record(created.id).url, record.url);
+});

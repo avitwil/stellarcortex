@@ -804,11 +804,6 @@ dialog::backdrop {
   border-color: var(--line);
   padding: 26px;
 }
-.hub-google {
-  background: var(--panel);
-  border-inline-start: 3px solid var(--accent);
-  margin-bottom: 32px;
-}
 .hub-card-heading h2,
 .hub-section-heading h2 {
   font-size: 19px;
@@ -821,35 +816,9 @@ dialog::backdrop {
   font-size: 13px;
   line-height: 1.75;
 }
-.hub-services {
-  gap: 10px;
-  margin-top: 26px;
-}
-.hub-services legend,
 .hub-readonly small {
   font-size: 12px;
 }
-.hub-services label {
-  padding: 14px 10px;
-  gap: 9px;
-  background: var(--field);
-  border-radius: 10px;
-  border-color: var(--control-border);
-  min-height: 68px;
-}
-.hub-services label:has(input:checked) {
-  background: var(--selection);
-  border-color: var(--accent);
-}
-.hub-services strong {
-  font-size: 12px;
-  font-weight: 600;
-}
-.hub-services small {
-  font-size: 11px;
-  color: var(--muted);
-}
-.hub-services input,
 .hub-readonly input {
   width: 16px;
   height: 16px;
@@ -877,11 +846,9 @@ dialog::backdrop {
 .hub-status.connected {
   color: var(--green);
 }
-.hub-google .actions,
 .hub-server .actions {
   gap: 10px;
 }
-.hub-google .actions button,
 .hub-server .actions button,
 .hub-section-heading .secondary {
   font-size: 12px;
@@ -919,9 +886,6 @@ dialog::backdrop {
   border-color: var(--accent);
   background: var(--field);
   font-size: 12px;
-}
-.hub-google-mark {
-  background-clip: text;
 }
 .voice-panel,
 .voice-call-mini {
@@ -1208,13 +1172,6 @@ dialog::backdrop {
   .hub-card-heading > div {
     flex-basis: 55%;
   }
-  .hub-services {
-    gap: 9px;
-  }
-  .hub-services label {
-    padding: 13px 10px;
-  }
-  .hub-google .actions button,
   .hub-server .actions button {
     font-size: 12px;
     min-height: 42px;
@@ -1280,7 +1237,6 @@ dialog::backdrop {
   .hub-text-button,
   .workspace-popover button,
   .account-menu > button,
-  .hub-google .actions button,
   .hub-server .actions button {
     min-height: 44px;
   }

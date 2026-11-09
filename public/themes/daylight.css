@@ -425,61 +425,6 @@ html[data-design='daylight'] .page {
 html[data-design='daylight'] .hub-card {
   box-shadow: none;
 }
-html[data-design='daylight'] .hub-google {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  padding: 24px 26px;
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  column-gap: 28px;
-  align-items: start;
-}
-html[data-design='daylight'] .hub-google > * {
-  grid-column: 2;
-}
-html[data-design='daylight'] .hub-google > .hub-card-heading,
-html[data-design='daylight'] .hub-google > .hub-account,
-html[data-design='daylight'] .hub-google > .notice {
-  grid-column: 1/-1;
-}
-html[data-design='daylight'] .hub-google > .hub-services {
-  grid-column: 1;
-  grid-row: 2 / span 6;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0;
-  margin: 18px 0 0;
-  border: 0;
-}
-html[data-design='daylight'] .hub-services legend {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-  padding: 0 0 10px;
-}
-html[data-design='daylight'] .hub-services label {
-  min-height: 60px;
-  margin-block-start: -1px;
-  margin-inline-start: -1px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
-}
-html[data-design='daylight'] .hub-services label:has(input:checked) {
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
-  border-color: var(--line);
-}
-html[data-design='daylight'] .hub-services strong {
-  font-size: 14.5px;
-  font-weight: 500;
-}
-html[data-design='daylight'] .hub-services small {
-  font-size: 13px;
-}
-html[data-design='daylight'] .hub-google > .hub-readonly {
-  margin-block-start: 44px;
-}
 html[data-design='daylight'] .hub-section-heading h2 {
   font-size: 22px;
   font-weight: 600;
@@ -555,17 +500,6 @@ html[data-design='daylight'] .settings-section + .settings-section {
 @media (max-width: 1100px) {
   html[data-design='daylight'] .sidebar {
     width: 336px;
-  }
-  html[data-design='daylight'] .hub-google {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  html[data-design='daylight'] .hub-google > *,
-  html[data-design='daylight'] .hub-google > .hub-services {
-    grid-column: 1;
-    grid-row: auto;
-  }
-  html[data-design='daylight'] .hub-google > .hub-readonly {
-    margin-block-start: 16px;
   }
 }
 @media (max-width: 900px) {
@@ -664,12 +598,6 @@ html[data-design='daylight'] .settings-section + .settings-section {
   }
   html[data-design='daylight'] .page {
     padding: 22px 14px 40px;
-  }
-  html[data-design='daylight'] .hub-google {
-    padding: 18px;
-  }
-  html[data-design='daylight'] .hub-google > .hub-services {
-    grid-template-columns: minmax(0, 1fr);
   }
   html[data-design='daylight'] .hub-server {
     grid-template-columns: minmax(0, 1fr);

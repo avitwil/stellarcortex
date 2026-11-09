@@ -657,9 +657,6 @@ html[data-design='mission'] .hub-card {
   border-radius: 8px;
   overflow: hidden;
 }
-html[data-design='mission'] .hub-google {
-  margin-block-end: 14px;
-}
 html[data-design='mission'] .hub-card-heading {
   padding: 10px 14px;
   border-block-end: 1px solid var(--line);
@@ -673,26 +670,8 @@ html[data-design='mission'] .hub-card-heading p {
   margin: 0;
   font-size: 12.5px;
 }
-html[data-design='mission'] .hub-services {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
-  margin: 12px 14px 0;
-}
-html[data-design='mission'] .hub-services label {
-  min-height: 0;
-  padding: 7px 8px;
-  background: var(--field);
-  border-radius: 6px;
-}
-html[data-design='mission'] .hub-services strong {
-  font-size: 13px;
-}
-html[data-design='mission'] .hub-services small {
-  font-size: 11.5px;
-}
 html[data-design='mission'] .hub-readonly,
-html[data-design='mission'] .hub-card > .hub-description,
-html[data-design='mission'] .hub-account {
+html[data-design='mission'] .hub-card > .hub-description {
   margin-inline: 14px;
 }
 html[data-design='mission'] .hub-card > .actions {
@@ -821,9 +800,6 @@ html[data-design='mission'] dialog {
   html[data-design='mission'] .design-tabs {
     margin-inline-start: 4px;
   }
-  html[data-design='mission'] .hub-services {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
   html[data-design='mission'] .hub-server {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -869,9 +845,6 @@ html[data-design='mission'] dialog {
   }
   html[data-design='mission'] .page {
     padding: 16px 10px 40px;
-  }
-  html[data-design='mission'] .hub-services {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   html[data-design='mission'][data-settings-page] #modal[data-kind='settings'] {
     inset-inline-start: 0;

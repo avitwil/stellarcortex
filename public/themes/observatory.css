@@ -344,19 +344,6 @@ html[data-design='observatory'] .composer-caption {
 }
 
 /* Pages and cards */
-html[data-design='observatory'] .hub-google {
-  position: relative;
-  overflow: hidden;
-  border-inline-start: 1px solid var(--line);
-}
-html[data-design='observatory'] .hub-google::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 3px;
-  background: var(--brand-line);
-}
 html[data-design='observatory'] .hub-card-heading h2 {
   font-size: 21px;
 }
@@ -364,12 +351,6 @@ html[data-design='observatory'] .hub-card-heading p,
 html[data-design='observatory'] .hub-section-heading p,
 html[data-design='observatory'] .hub-description {
   font-size: 14px;
-}
-html[data-design='observatory'] .hub-services strong {
-  font-size: 14px;
-}
-html[data-design='observatory'] .hub-services small {
-  font-size: 12.5px;
 }
 html[data-design='observatory'] dialog {
   border-radius: 24px;

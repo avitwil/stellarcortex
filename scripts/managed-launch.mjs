@@ -132,6 +132,7 @@ async function probe(release) {
   const env = {
     ...process.env,
     STELLARCORTEX_DATA_DIR: dataDir,
+    STELLARCORTEX_MANAGER_DIR: managerDir,
     STELLARCORTEX_MANAGED_UPDATES: '1',
     STELLARCORTEX_UPDATE_BOOT: '1',
     STELLARCORTEX_MANAGED_UPDATE_RESULT: fs.existsSync(resultFile)

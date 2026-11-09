@@ -295,11 +295,23 @@ function chatAvatar(chat) {
         .map(b => avatar(botById(b)))
         .join('')}</span>`;
 }
-function toast(text) {
+// A pinned message is not replaced: a toast that arrives meanwhile is shown after it.
+function toast(text, ms = 4500, pinned = false) {
+  if (toast.pinned && !pinned) {
+    toast.next = text;
+    return;
+  }
+  toast.pinned = pinned;
   $('#toast').textContent = text;
   $('#toast').hidden = false;
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => ($('#toast').hidden = true), 4500);
+  toast.timer = setTimeout(() => {
+    $('#toast').hidden = true;
+    toast.pinned = false;
+    const next = toast.next;
+    toast.next = null;
+    if (next) toast(next);
+  }, ms);
 }
 // Lock and an expired session both drop workspace data, so nothing can be read from behind the login screen.
 function showLogin() {
@@ -430,6 +442,7 @@ async function refresh() {
     refreshBotConversation();
     renderUsageSurfaces();
     processVoiceReplies();
+    showNotices();
   } finally {
     refreshing = false;
     if (refreshAgain) {
@@ -6227,7 +6240,7 @@ $('#login-form').onsubmit = async e => {
 async function boot() {
   const returned = new URL(location.href),
     connectionReturn = returned.searchParams.get('connections');
-  if (['google', 'mcp'].includes(connectionReturn)) {
+  if (connectionReturn === 'mcp') {
     view = 'apps';
     appsHub.returnResult = returned.searchParams.get('result') === 'error' ? 'error' : '';
     returned.searchParams.delete('connections');
@@ -6245,6 +6258,18 @@ async function boot() {
   connectEvents();
   loadAccount().catch(e => toast(e.message));
   loadConnectionSettings().catch(() => {});
+}
+// The server hands a notice to one page load only, so it shows once.
+function showNotices() {
+  if (state.notices?.includes('google-removed'))
+    toast(
+      tr(
+        'חיבור Google המובנה הוסר. בדקו ב־myaccount.google.com/permissions שהגישה של StellarCortex הוסרה. אפשר לחבר את Google דרך שירות MCP כמו Composio.',
+        'The built-in Google connection was removed. Check at myaccount.google.com/permissions that StellarCortex no longer has access. You can connect Google through an MCP service such as Composio.',
+      ),
+      20000,
+      true,
+    );
 }
 boot().catch(e => {
   $('#login').hidden = false;

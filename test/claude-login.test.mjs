@@ -187,7 +187,10 @@ test('cancel ends the process, one login runs at a time, and a new one can start
 });
 test('a login that is never finished times out and its process ends', async t => {
   const { runtime, read } = stub(t),
-    login = new ClaudeLogin(() => runtime, { timeoutMs: 300 });
+    // The timer starts at spawn. A Node child takes 100-400 ms to print its link when the suite runs
+    // files in parallel, so 300 ms timed out before the stub wrote record.json. 2 s leaves room and
+    // still ends well inside until()'s 5 s.
+    login = new ClaudeLogin(() => runtime, { timeoutMs: 2000 });
   await login.start();
   const { pid } = read();
   await until(() => login.status().state === 'failed');

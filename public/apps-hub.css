@@ -8,14 +8,6 @@
   background: var(--panel);
   border-radius: 18px;
 }
-.hub-google {
-  background: linear-gradient(
-    120deg,
-    color-mix(in srgb, var(--accent) 6%, var(--panel)),
-    var(--panel)
-  );
-  margin-bottom: 34px;
-}
 .hub-card-heading {
   display: flex;
   align-items: center;
@@ -39,24 +31,6 @@
   color: var(--muted);
   margin: 4px 0 0;
   line-height: 1.6;
-}
-.hub-google-mark {
-  font:
-    bold 34px/1 Arial,
-    sans-serif;
-  background: conic-gradient(
-    #4285f4 0 25%,
-    #34a853 25% 50%,
-    #fbbc05 50% 68%,
-    #ea4335 68% 84%,
-    #4285f4 84%
-  );
-  background-clip: text;
-  color: transparent;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
 }
 .hub-server-icon {
   display: grid;
@@ -104,42 +78,6 @@
 .hub-status.error {
   color: var(--red);
 }
-.hub-account {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 15px 0 0;
-}
-.hub-services {
-  border: 0;
-  margin: 23px 0 16px;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 9px;
-}
-.hub-services legend {
-  font-size: 11px;
-  color: var(--muted);
-  padding: 0 0 10px;
-}
-.hub-services label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  margin: 0;
-  padding: 12px 9px;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  color: var(--text);
-  min-width: 0;
-  background: var(--panel);
-}
-.hub-services label:has(input:checked) {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
-  background: color-mix(in srgb, var(--accent) 7%, var(--panel));
-}
-.hub-services input,
 .hub-readonly input {
   width: 14px;
   height: 14px;
@@ -147,20 +85,6 @@
   margin: 0;
   accent-color: var(--accent);
   padding: 0;
-}
-.hub-services strong,
-.hub-services small {
-  display: block;
-}
-.hub-services strong {
-  font-weight: 500;
-  font-size: 11px;
-}
-.hub-services small {
-  color: var(--muted);
-  font-size: 10px;
-  margin-top: 2px;
-  overflow-wrap: anywhere;
 }
 .hub-readonly {
   display: flex;
@@ -330,18 +254,9 @@
   font-family: Consolas, monospace;
   font-size: 12px;
 }
-#hub-mcp-form input[type='password'],
-#hub-google-form input[type='password'] {
+#hub-mcp-form input[type='password'] {
   direction: ltr;
   text-align: left;
-}
-@media (max-width: 1100px) {
-  .hub-services {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .hub-google {
-    padding: 20px;
-  }
 }
 @media (max-width: 620px) {
   .hub-card-heading {
@@ -349,9 +264,6 @@
   }
   .hub-card-heading > div {
     flex-basis: 60%;
-  }
-  .hub-services {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .hub-card {
     padding: 17px;
@@ -361,13 +273,6 @@
   }
   .hub-section-heading > div {
     flex-basis: 100%;
-  }
-  .hub-google .actions {
-    gap: 7px;
-  }
-  .hub-google .actions button {
-    font-size: 11px;
-    padding: 8px 11px;
   }
   .app-hub .page-intro {
     flex-wrap: wrap;

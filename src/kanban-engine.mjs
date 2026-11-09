@@ -157,15 +157,12 @@ export function createKanbanEngineExecutor({
     } catch {
       return { allowed: false, reason: 'The selected provider is not connected' };
     }
-    if (['email', 'calendar'].includes(role)) {
-      const needed = role === 'email' ? 'gmail_get_message' : 'calendar_list_events',
-        tools = engine.connections?.google?.permittedTools?.() || [];
-      if (!tools.some(t => t.name === needed))
-        return {
-          allowed: false,
-          reason: `Existing ${role} read capability/permission is unavailable; no permission was expanded`,
-        };
-    }
+    // No built-in email or calendar connector exists, so these roles are never routed automatically.
+    if (['email', 'calendar'].includes(role))
+      return {
+        allowed: false,
+        reason: `Automatic ${role} routing is unavailable: there is no built-in ${role} connector, and MCP connections are not checked for it. Choose an agent manually.`,
+      };
     return { allowed: true };
   };
   executor.control = (projectId, action) => {

@@ -51,19 +51,6 @@ export function oauthAuthorizationUrl(value) {
   return null;
 }
 
-export function selectedServices(values, services) {
-  const allowed = new Set(services.map(item => (typeof item === 'string' ? item : item.id)));
-  return [...new Set((Array.isArray(values) ? values : []).filter(value => allowed.has(value)))];
-}
-
-export const GOOGLE_SERVICES = [
-  { id: 'gmail', name: 'Gmail', he: 'דואר' },
-  { id: 'drive', name: 'Drive', he: 'קבצים' },
-  { id: 'docs', name: 'Docs', he: 'מסמכים' },
-  { id: 'sheets', name: 'Sheets', he: 'גיליונות' },
-  { id: 'calendar', name: 'Calendar', he: 'יומן' },
-  { id: 'contacts', name: 'Contacts', he: 'אנשי קשר' },
-];
 export const MCP_TRANSPORTS = ['streamable-http', 'sse', 'stdio'];
 export const MCP_AUTH_TYPES = ['none', 'bearer', 'header', 'oauth'];
 export function mcpConnectionDraft(record = {}) {
@@ -157,28 +144,5 @@ export function safeMcpConnection(record = {}) {
     ]),
     hasToken: record.hasToken === true,
     hasClientSecret: record.hasClientSecret === true,
-  };
-}
-export function safeGoogleStatus(record = {}) {
-  return {
-    ...nonSecretFields(record, [
-      'id',
-      'name',
-      'clientId',
-      'services',
-      'readOnly',
-      'revision',
-      'scopes',
-      'toolCount',
-      'redirectUri',
-      'email',
-      'error',
-    ]),
-    configured: record.configured === true,
-    connected: record.connected === true,
-    hasClientSecret: record.hasClientSecret === true,
-    ...(typeof record.account?.email === 'string'
-      ? { account: { email: record.account.email } }
-      : {}),
   };
 }
